@@ -71,6 +71,16 @@ test.describe("a Agenda como o dono do produto a usa", () => {
     await expect(page).toHaveURL(/\/app\/settings\/tenant\/agenda/, { timeout: ESPERA });
   });
 
+  test("da Agenda dá para conectar CalDAV — o formulário está na tela, não é 'em breve'", async () => {
+    await page.goto("/app/agenda");
+    await expect(page.getByTestId("tela-agenda")).toBeVisible({ timeout: ESPERA });
+    await expect(page.getByTestId("cartao-caldav")).toBeVisible();
+    await expect(page.getByTestId("caldav-home-url")).toBeVisible();
+    await expect(page.getByTestId("caldav-usuario")).toBeVisible();
+    await expect(page.getByTestId("caldav-senha")).toBeVisible();
+    await expect(page.getByTestId("conectar-caldav")).toBeVisible();
+  });
+
   test("as pessoas da equipe são REAIS — o filtro deixou de ser invisível", async () => {
     // `FiltroDePessoas` devolve `null` com menos de duas pessoas. Enquanto a
     // tela do produto passava lista vazia, o filtro existia, estava provado na

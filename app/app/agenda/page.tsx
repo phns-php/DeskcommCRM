@@ -2,7 +2,7 @@ import { addDays, startOfWeek } from "date-fns";
 import { redirect } from "next/navigation";
 
 import { enderecoDeRetorno, faltaParaConectarOGoogle, googleEstaConfigurado } from "@/lib/agenda/google/config";
-import { PROVEDOR_GOOGLE } from "@/lib/agenda/tipos";
+import { PROVEDOR_CALDAV, PROVEDOR_GOOGLE } from "@/lib/agenda/tipos";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { createClient } from "@/lib/supabase/server";
 
@@ -172,20 +172,31 @@ export default async function AgendaPage() {
   // QUAL conta está conectada — o prop existia no cartão e NUNCA era passado,
   // então o ramo "Agenda conectada" era código morto e o botão "Conectar Google"
   // não sumia depois de conectar. Segunda conexão era um clique no mesmo botão.
-  const { data: conexao } = await supabase
-    .from("calendar_connections")
-    .select("account_email, status")
-    .eq("organization_id", activeOrg.orgId)
-    .eq("user_id", user.id)
-    // ⚠️ A CONSTANTE, e não o literal. Isto era `.eq("provider", "google")` — um
-    // valor que o CHECK de `calendar_connections` PROÍBE existir, então a
-    // consulta casava zero linhas SEMPRE. O efeito na tela: `contaConectada`
-    // vinha `null`, o ramo "Agenda conectada" do cartão nunca entrava, e o botão
-    // "Conectar Google" continuava aparecendo depois de a pessoa já ter
-    // conectado. Ela reconectava, o ciclo repetia.
-    .eq("provider", PROVEDOR_GOOGLE)
-    .neq("status", "disconnected")
-    .maybeSingle();
+  const [{ data: conexao }, { data: conexaoCalDav }] = await Promise.all([
+    supabase
+      .from("calendar_connections")
+      .select("account_email, status")
+      .eq("organization_id", activeOrg.orgId)
+      .eq("user_id", user.id)
+      // ⚠️ A CONSTANTE, e não o literal. Isto era `.eq("provider", "google")` — um
+      // valor que o CHECK de `calendar_connections` PROÍBE existir, então a
+      // consulta casava zero linhas SEMPRE. O efeito na tela: `contaConectada`
+      // vinha `null`, o ramo "Agenda conectada" do cartão nunca entrava, e o
+      // botão "Conectar Google" continuava aparecendo depois de a pessoa já ter
+      // conectado. Ela reconectava, o ciclo repetia.
+      .eq("provider", PROVEDOR_GOOGLE)
+      .neq("status", "disconnected")
+      .maybeSingle(),
+    supabase
+      .from("calendar_connections")
+      .select("account_email, status")
+      .eq("organization_id", activeOrg.orgId)
+      .eq("user_id", user.id)
+      .eq("provider", PROVEDOR_CALDAV)
+      .neq("status", "disconnected")
+      .limit(1)
+      .maybeSingle(),
+  ]);
 
   // `await`: a credencial pode vir do BANCO agora (migration 0201), não só do
   // `.env`. `faltaParaConectarOGoogle` já só devolve nomes de variável quando as
@@ -199,6 +210,7 @@ export default async function AgendaPage() {
       fusoDeApresentacao={fusoDeApresentacao}
       googleConfigurado={googleConfigurado}
       contaConectada={conexao?.account_email ?? null}
+      contaCalDav={conexaoCalDav?.account_email ?? null}
       enderecoDeRetorno={enderecoDeRetorno()}
       faltaNoGoogle={faltaNoGoogle}
       // SÓ para quem administra a INSTALAÇÃO. A tela do app OAuth vive em

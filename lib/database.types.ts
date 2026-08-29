@@ -1969,6 +1969,7 @@ export type Database = {
         Row: {
           account_email: string
           created_at: string
+          home_url: string | null
           id: string
           last_sync_at: string | null
           last_sync_error: string | null
@@ -1986,6 +1987,7 @@ export type Database = {
         Insert: {
           account_email: string
           created_at?: string
+          home_url?: string | null
           id?: string
           last_sync_at?: string | null
           last_sync_error?: string | null
@@ -2003,6 +2005,7 @@ export type Database = {
         Update: {
           account_email?: string
           created_at?: string
+          home_url?: string | null
           id?: string
           last_sync_at?: string | null
           last_sync_error?: string | null

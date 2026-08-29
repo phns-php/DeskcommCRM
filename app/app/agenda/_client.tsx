@@ -10,6 +10,7 @@ import * as React from "react";
 
 import { AvisoDaConexaoGoogle } from "./_components/AvisoDaConexaoGoogle";
 import { CartaoDaConexaoGoogle } from "./_components/CartaoDaConexaoGoogle";
+import { CartaoDaConexaoCalDav } from "./_components/CartaoDaConexaoCalDav";
 import { PORTA_HORARIOS, PORTA_TIPOS, PortasDaAgenda } from "./_components/PortasDaAgenda";
 
 import { AgendaInterativa } from "@/components/agenda/AgendaInterativa";
@@ -68,6 +69,7 @@ export function AgendaClient({
   fusoDeApresentacao,
   googleConfigurado,
   contaConectada,
+  contaCalDav,
   enderecoDeRetorno,
   faltaNoGoogle,
   linkDeConfiguracaoDoGoogle,
@@ -77,6 +79,7 @@ export function AgendaClient({
   fusoDeApresentacao: string | null;
   googleConfigurado: boolean;
   contaConectada?: string | null;
+  contaCalDav?: string | null;
   enderecoDeRetorno?: string;
   faltaNoGoogle: string[];
   /** Preenchido só para quem administra a instalação — ver `page.tsx`. */
@@ -263,6 +266,8 @@ export function AgendaClient({
         contaConectada={contaConectada}
         enderecoDeRetorno={enderecoDeRetorno}
       />
+
+      <CartaoDaConexaoCalDav contaConectada={contaCalDav} />
 
       <PortasDaAgenda />
 

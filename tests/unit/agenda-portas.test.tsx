@@ -66,6 +66,12 @@ describe("a tela da Agenda MONTA as portas — componente solto não conta", () 
     expect(fonte.includes("<PortasDaAgenda"), "importou e não renderizou").toBe(true);
   });
 
+  it("a tela MONTA o cartão CalDAV — componente solto não conta", () => {
+    const fonte = readFileSync(join(process.cwd(), "app", "app", "agenda", "_client.tsx"), "utf8");
+    expect(fonte.includes("CartaoDaConexaoCalDav"), "o cartão existe e ninguém o monta").toBe(true);
+    expect(fonte.includes("<CartaoDaConexaoCalDav"), "importou e não renderizou").toBe(true);
+  });
+
   it("o vazio da Agenda aponta para as mesmas portas, não para onClick vazio", () => {
     const fonte = readFileSync(join(process.cwd(), "app", "app", "agenda", "_client.tsx"), "utf8");
     expect(fonte).toMatch(/EmptyAgenda[\s\S]*href:\s*PORTA_TIPOS|EmptyAgenda[\s\S]*PORTA_TIPOS/);

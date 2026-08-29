@@ -6272,6 +6272,15 @@ export const DICIONARIO: Traducoes = {
   "horários": { es: "horarios" },
   "Carregando a agenda": { es: "Cargando la agenda" },
 
+  "CalDAV conectado:": { es: "CalDAV conectado:" },
+  "Conectar agenda CalDAV": { es: "Conectar agenda CalDAV" },
+  "iCloud, Nextcloud ou a agenda da sua rede. Use senha de aplicativo, não a senha da conta. O endereço na rede local é aceito.": {
+    es: "iCloud, Nextcloud o la agenda de tu red. Usa contraseña de aplicación, no la de la cuenta. La dirección en la red local se acepta.",
+  },
+  "Endereço da agenda": { es: "Dirección de la agenda" },
+  "Senha de aplicativo": { es: "Contraseña de aplicación" },
+  "Não consegui conectar esta agenda.": { es: "No pude conectar esta agenda." },
+
   // ═══ O que a reconciliação dos três PRs deixou a descoberto ═══
   //
   // Cinco chamadas `t()` que os merges trouxeram sem a chave correspondente —

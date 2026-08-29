@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Agenda conectada — CalDAV entra no mesmo contrato do Google",
+    "subtitle": "uma tabela, uma pessoa, um conflito de horário; o adapter CalDAV não é a terceira agenda",
+    "output": "agenda-conectada.html",
+    "quality_profile": "standard"
+  },
+  "lanes": [
+    { "id": "humano", "label": "O que a pessoa vê" },
+    { "id": "borda", "label": "Borda HTTP (agent+)" },
+    { "id": "adapter", "label": "Adapter (lib/agenda/caldav)" },
+    { "id": "banco", "label": "Banco" }
+  ],
+  "mainPath": ["tela", "cartaoCaldav", "post", "descobrir", "url", "conexoes"],
+  "nodes": [
+    { "id": "tela", "lane": "humano", "col": 1, "type": "frontend", "label": "/app/agenda", "sublabel": "grade do dia · já existia" },
+    { "id": "cartaoGoogle", "lane": "humano", "col": 2, "type": "frontend", "label": "CartaoDaConexaoGoogle", "sublabel": "OAuth da instalação + consentimento" },
+    { "id": "cartaoCaldav", "lane": "humano", "col": 3, "type": "frontend", "label": "CartaoDaConexaoCalDav", "sublabel": "URL + usuário + senha de aplicativo" },
+
+    { "id": "post", "lane": "borda", "col": 3, "type": "api", "label": "POST /agenda/caldav/conectar", "sublabel": "requireRole agent · rate limit 8/min" },
+    { "id": "del", "lane": "borda", "col": 4, "type": "api", "label": "DELETE /agenda/caldav/desconectar", "sublabel": "apaga eventos + senha cifrada" },
+
+    { "id": "descobrir", "lane": "adapter", "col": 3, "type": "service", "label": "descobrirCalDav", "sublabel": "PROPFIND · 401=senha · DAV=agenda" },
+    { "id": "url", "lane": "adapter", "col": 2, "type": "service", "label": "parseUrlCalDav", "sublabel": "LAN e loopback passam; 169.254 não" },
+
+    { "id": "conexoes", "lane": "banco", "col": 3, "type": "database", "label": "calendar_connections", "sublabel": "provider caldav · home_url · senha em oauth_access_token_encrypted" },
+    { "id": "calendarios", "lane": "banco", "col": 4, "type": "database", "label": "calendar_connection_calendars", "sublabel": "primário = o home-set descoberto" },
+    { "id": "audit", "lane": "banco", "col": 2, "type": "database", "label": "api_audit_log", "sublabel": "agenda.caldav.conexao_*" }
+  ],
+  "edges": [
+    { "id": "e1", "from": "tela", "to": "cartaoGoogle", "label": "cartão que já existia" },
+    { "id": "e2", "from": "tela", "to": "cartaoCaldav", "label": "formulário sempre visível — não falta app OAuth" },
+    { "id": "e3", "from": "cartaoGoogle", "to": "conexoes", "label": "lê provider=google_calendar da sessão" },
+    { "id": "e4", "from": "cartaoCaldav", "to": "post", "label": "POST { home_url, usuario, senha }" },
+    { "id": "e5", "from": "cartaoCaldav", "to": "del", "label": "DELETE — a própria pessoa" },
+    { "id": "e6", "from": "post", "to": "descobrir", "label": "handshake ANTES de gravar" },
+    { "id": "e7", "from": "descobrir", "to": "url", "label": "cada hop revalida, inclusive Location" },
+    { "id": "e8", "from": "url", "to": "post", "label": "recusa volta 422; metadata nunca é fetch" },
+    { "id": "e9", "from": "post", "to": "conexoes", "label": "upsert organization_id da sessão" },
+    { "id": "e10", "from": "post", "to": "calendarios", "label": "primário = home-set; sem isto o sync futuro itera zero" },
+    { "id": "e11", "from": "post", "to": "audit", "label": "conexao_concluida · conexao_falhou" },
+    { "id": "e12", "from": "del", "to": "conexoes", "label": "status disconnected + senha null + home_url null" },
+    { "id": "e13", "from": "del", "to": "audit", "label": "conexao_desconectada por id" },
+    { "id": "e14", "from": "calendarios", "to": "conexoes", "label": "FK connection_id" },
+    { "id": "e15", "from": "cartaoCaldav", "to": "conexoes", "label": "lê provider=caldav da sessão" }
+  ],
+  "cards": [
+    {
+      "dot": "rose",
+      "title": "O que este recorte NÃO faz — dívida declarada",
+      "items": [
+        "Não importa os eventos para calendar_external_events: conectar não ocupa horário sozinho. Sem o sync, o agente ainda pode oferecer slot em cima de compromisso do Nextcloud. É o próximo recorte, no mesmo motor de ocupados.ts — não um terceiro.",
+        "Outlook/Microsoft Graph não entra neste mapa: o CHECK já aceita microsoft_graph, a tela só ganha porta quando o adapter OAuth existir.",
+        "O guard de webhook (assertSafeOutboundUrl) continua recusando LAN. CalDAV tem guard próprio de propósito: a clínica e o NAS moram em 192.168."
+      ]
+    }
+  ]
+}
