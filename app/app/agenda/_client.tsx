@@ -9,9 +9,7 @@ import { addDays, endOfMonth, format, startOfDay, startOfMonth, startOfWeek } fr
 import * as React from "react";
 
 import { AvisoDaConexaoGoogle } from "./_components/AvisoDaConexaoGoogle";
-import { CartaoDaConexaoGoogle } from "./_components/CartaoDaConexaoGoogle";
-import { CartaoDaConexaoMicrosoft } from "./_components/CartaoDaConexaoMicrosoft";
-import { CartaoDaConexaoCalDav } from "./_components/CartaoDaConexaoCalDav";
+import { PainelDasConexoesDaAgenda } from "./_components/PainelDasConexoesDaAgenda";
 import { PORTA_HORARIOS, PORTA_TIPOS, PortasDaAgenda } from "./_components/PortasDaAgenda";
 
 import { AgendaInterativa } from "@/components/agenda/AgendaInterativa";
@@ -270,23 +268,19 @@ export function AgendaClient({
         <AvisoDaConexaoGoogle />
       </React.Suspense>
 
-      <CartaoDaConexaoGoogle
-        configurado={googleConfigurado}
-        falta={faltaNoGoogle}
-        linkDeConfiguracao={linkDeConfiguracaoDoGoogle}
+      <PainelDasConexoesDaAgenda
+        googleConfigurado={googleConfigurado}
+        microsoftConfigurado={microsoftConfigurado}
         contaConectada={contaConectada}
+        contaOutlook={contaOutlook}
+        contaCalDav={contaCalDav}
         enderecoDeRetorno={enderecoDeRetorno}
+        enderecoDeRetornoMicrosoft={enderecoDeRetornoMicrosoft}
+        faltaNoGoogle={faltaNoGoogle}
+        faltaNoMicrosoft={faltaNoMicrosoft}
+        linkDeConfiguracaoDoGoogle={linkDeConfiguracaoDoGoogle}
+        linkDeConfiguracaoDoMicrosoft={linkDeConfiguracaoDoMicrosoft}
       />
-
-      <CartaoDaConexaoMicrosoft
-        configurado={microsoftConfigurado}
-        falta={faltaNoMicrosoft}
-        linkDeConfiguracao={linkDeConfiguracaoDoMicrosoft}
-        contaConectada={contaOutlook}
-        enderecoDeRetorno={enderecoDeRetornoMicrosoft}
-      />
-
-      <CartaoDaConexaoCalDav contaConectada={contaCalDav} />
 
       <PortasDaAgenda />
 

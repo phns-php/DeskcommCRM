@@ -2197,6 +2197,8 @@ export const DICIONARIO: Traducoes = {
   },
   Conectando: { es: "Conectando" },
   Conectado: { es: "Conectado" },
+  "Agendas externas": { es: "Agendas externas" },
+  "Não configurado": { es: "No configurado" },
   "Token expirado": { es: "Token expirado" },
   "Permissão faltando": { es: "Permiso faltante" },
   Desconectado: { es: "Desconectado" },
