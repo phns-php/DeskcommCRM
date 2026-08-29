@@ -4,11 +4,15 @@ import { useLocaleDeData } from "@/hooks/i18n/useLocaleDeData";
 
 import { useT } from "@/hooks/i18n/useT";
 
+import Link from "next/link";
 import { addDays, endOfMonth, format, startOfDay, startOfMonth, startOfWeek } from "date-fns";
 import * as React from "react";
 
 import { AvisoDaConexaoGoogle } from "./_components/AvisoDaConexaoGoogle";
 import { CartaoDaConexaoGoogle } from "./_components/CartaoDaConexaoGoogle";
+import { CartaoDaConexaoMicrosoft } from "./_components/CartaoDaConexaoMicrosoft";
+import { CartaoDaConexaoCalDav } from "./_components/CartaoDaConexaoCalDav";
+import { PORTA_HORARIOS, PORTA_TIPOS, PortasDaAgenda } from "./_components/PortasDaAgenda";
 
 import { AgendaInterativa } from "@/components/agenda/AgendaInterativa";
 import { FiltroDePessoas } from "@/components/agenda/FiltroDePessoas";
@@ -65,20 +69,32 @@ const VISOES: Array<{ id: VisaoDaAgenda; rotulo: string }> = [
 export function AgendaClient({
   fusoDeApresentacao,
   googleConfigurado,
+  microsoftConfigurado,
   contaConectada,
+  contaOutlook,
+  contaCalDav,
   enderecoDeRetorno,
+  enderecoDeRetornoMicrosoft,
   faltaNoGoogle,
+  faltaNoMicrosoft,
   linkDeConfiguracaoDoGoogle,
+  linkDeConfiguracaoDoMicrosoft,
   tiposIniciais,
   agendamentosIniciais,
 }: {
   fusoDeApresentacao: string | null;
   googleConfigurado: boolean;
+  microsoftConfigurado: boolean;
   contaConectada?: string | null;
+  contaOutlook?: string | null;
+  contaCalDav?: string | null;
   enderecoDeRetorno?: string;
+  enderecoDeRetornoMicrosoft?: string;
   faltaNoGoogle: string[];
+  faltaNoMicrosoft: string[];
   /** Preenchido só para quem administra a instalação — ver `page.tsx`. */
   linkDeConfiguracaoDoGoogle?: string;
+  linkDeConfiguracaoDoMicrosoft?: string;
   /** Tipos ativos, resolvidos no servidor: não há rota que os liste ainda. */
   tiposIniciais: Array<{
     id: string;
@@ -262,6 +278,18 @@ export function AgendaClient({
         enderecoDeRetorno={enderecoDeRetorno}
       />
 
+      <CartaoDaConexaoMicrosoft
+        configurado={microsoftConfigurado}
+        falta={faltaNoMicrosoft}
+        linkDeConfiguracao={linkDeConfiguracaoDoMicrosoft}
+        contaConectada={contaOutlook}
+        enderecoDeRetorno={enderecoDeRetornoMicrosoft}
+      />
+
+      <CartaoDaConexaoCalDav contaConectada={contaCalDav} />
+
+      <PortasDaAgenda />
+
       <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
         <div className="min-w-0">
           <h1 className="text-2xl font-semibold tracking-tight">{t("Agenda")}</h1>
@@ -289,12 +317,16 @@ export function AgendaClient({
             // Sem NENHUM tipo de agendamento cadastrado não há o que marcar — e
             // isto é diferente de "a API não existe": a ação faz sentido, falta
             // configuração. Por isso o motivo à vista, e não um botão mudo.
-            <span
+            //
+            // ⚠️ ERA UM <span>. Dizia o que fazer e não levava até lá — o
+            // mesmo beco que a jornada já tinha pago antes de `?aba=atendimento`.
+            <Link
+              href={PORTA_TIPOS}
               data-testid="motivo-novo-agendamento"
-              className="hidden text-xs text-text-subtle sm:inline"
+              className="hidden text-xs text-text-subtle underline-offset-2 hover:text-text hover:underline sm:inline"
             >
               {t("Cadastre um tipo de agendamento para começar")}
-            </span>
+            </Link>
           )}
           <Button
             size="sm"
@@ -664,7 +696,10 @@ export function AgendaClient({
           tinha pago: verde por banco sujo. */}
       {agendamentos.length === 0 ? (
         <div className="rounded-lg border border-border bg-surface p-4">
-          <EmptyAgenda />
+          <EmptyAgenda
+            primary={{ label: t("Tipos de agendamento"), href: PORTA_TIPOS }}
+            secondary={{ label: t("Horários de atendimento"), href: PORTA_HORARIOS }}
+          />
         </div>
       ) : null}
       {/* A GRADE INTERATIVA — clicar num bloco livre marca ali, arrastar um card

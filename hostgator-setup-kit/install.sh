@@ -15,7 +15,7 @@ set -euo pipefail
 # de qualquer 'cd' (step 2 pode entrar num repo clonado à parte).
 KIT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 
-REPO_URL="${REPO_URL:-https://github.com/melgarafael/DeskcommCRM.git}"
+REPO_URL="${REPO_URL:-https://github.com/phns-php/DeskcommCRM.git}"
 # Uma constante, dois usos (o fim feliz e o fim travado) — e o comecar.sh tem a
 # gêmea. Link repetido à mão vira link divergente na primeira troca.
 COMUNIDADE_URL="https://lp-comunidade.automatiklabs.com.br"
@@ -1519,6 +1519,11 @@ esac
   # que é exatamente o que o gate `test-validators.sh` cobra.
   envq GOOGLE_CALENDAR_CLIENT_ID "${GOOGLE_CALENDAR_CLIENT_ID:-}"
   envq GOOGLE_CALENDAR_CLIENT_SECRET "${GOOGLE_CALENDAR_CLIENT_SECRET:-}"
+  # Outlook / Microsoft Graph — mesmo contrato do Google: opcional, vazio de
+  # fábrica, e TEM de entrar na lista de envq. O `.env` é escrito com truncamento
+  # (`} > .env`); chave que este script não grava some na execução seguinte.
+  envq MICROSOFT_GRAPH_CLIENT_ID "${MICROSOFT_GRAPH_CLIENT_ID:-}"
+  envq MICROSOFT_GRAPH_CLIENT_SECRET "${MICROSOFT_GRAPH_CLIENT_SECRET:-}"
   # As três acima e as duas abaixo entram aqui pelo MESMO motivo, e não por
   # simetria: o .env é escrito com truncamento (`} > .env`, no fecho deste
   # bloco), então chave que este script não grava é APAGADA na execução

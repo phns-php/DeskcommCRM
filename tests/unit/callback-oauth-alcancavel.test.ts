@@ -88,44 +88,34 @@ describe("todo callback de OAuth é alcançável sem cookie de sessão", () => {
     ).toBe(true);
   });
 
-  it("o vínculo do Google não usa sameSite strict — seria o mesmo defeito de novo", () => {
-    // O cookie que substituiu a leitura de sessão só serve se ELE viajar na
-    // volta. Trocado para "strict" por engano, o fluxo volta a falhar sempre —
-    // e falharia com a mesma mensagem genérica de todo o resto.
-    const fonte = readFileSync("app/api/v1/agenda/google/connect/route.ts", "utf8");
-    expect(fonte).toMatch(/sameSite:\s*"lax"/);
-    expect(fonte, "o cookie de vínculo não pode ser strict").not.toMatch(
-      /NOME_DO_VINCULO[\s\S]{0,400}?sameSite:\s*"strict"/,
-    );
+  it("o vínculo do Google e do Outlook não usa sameSite strict — seria o mesmo defeito de novo", () => {
+    for (const provedor of ["google", "microsoft"] as const) {
+      const fonte = readFileSync(`app/api/v1/agenda/${provedor}/connect/route.ts`, "utf8");
+      expect(fonte, `${provedor}: o cookie de vínculo tem de ser lax`).toMatch(/sameSite:\s*"lax"/);
+      expect(fonte, `${provedor}: o cookie de vínculo não pode ser strict`).not.toMatch(
+        /NOME_DO_VINCULO[\s\S]{0,400}?sameSite:\s*"strict"/,
+      );
+    }
   });
 
   it("o `secure` do vínculo é derivado, nunca `true` literal", () => {
-    // `secure: true` faria o navegador descartar o cookie em toda instalação
-    // servida por `http://` — e essa população existe num produto self-host.
-    // Lá o conserto viraria o defeito que ele conserta.
-    const fonte = readFileSync("app/api/v1/agenda/google/connect/route.ts", "utf8");
-    expect(fonte).toMatch(/secure:\s*cookieSecure\(\)/);
+    for (const provedor of ["google", "microsoft"] as const) {
+      const fonte = readFileSync(`app/api/v1/agenda/${provedor}/connect/route.ts`, "utf8");
+      expect(fonte, `${provedor}: secure tem de sair de cookieSecure()`).toMatch(/secure:\s*cookieSecure\(\)/);
+    }
   });
 
   it("o vínculo é conferido ANTES de o nonce ser queimado", () => {
-    // A ordem é load-bearing e nada além deste caso a prende. Queimar antes de
-    // conferir dá a quem tem um `state` vazado um botão de negação de serviço:
-    // ele queima, e o dono legítimo recebe `state_reutilizado` ao voltar.
-    // Os dois ramos falham com a MESMA mensagem, então um teste que olhasse só
-    // o desfecho não veria a inversão.
-    const fonte = readFileSync("app/api/v1/agenda/google/callback/route.ts", "utf8");
-    // ⚠️ ANCORAR NA CHAMADA, `if (!vinculoConfere(`, e não no símbolo solto.
-    // A primeira versão deste caso procurava `vinculoConfere` — e casava com a
-    // linha de IMPORT, que está sempre no topo do arquivo. O caso passava com a
-    // ordem invertida de propósito: era decorativo, e só a sabotagem mostrou.
-    const confere = fonte.indexOf("if (!vinculoConfere(");
-    const queima = fonte.indexOf("calendar_oauth_nonces");
-    expect(confere, "a CHAMADA `if (!vinculoConfere(` sumiu do callback").toBeGreaterThan(-1);
-    expect(queima, "a queima do nonce sumiu do callback").toBeGreaterThan(-1);
-    expect(
-      confere,
-      "o vínculo passou a ser conferido DEPOIS da queima do nonce — um `state` vazado " +
-        "vira negação de serviço contra o dono legítimo",
-    ).toBeLessThan(queima);
+    for (const provedor of ["google", "microsoft"] as const) {
+      const fonte = readFileSync(`app/api/v1/agenda/${provedor}/callback/route.ts`, "utf8");
+      const confere = fonte.indexOf("if (!vinculoConfere(");
+      const queima = fonte.indexOf("calendar_oauth_nonces");
+      expect(confere, `${provedor}: a CHAMADA \`if (!vinculoConfere(\` sumiu do callback`).toBeGreaterThan(-1);
+      expect(queima, `${provedor}: a queima do nonce sumiu do callback`).toBeGreaterThan(-1);
+      expect(
+        confere,
+        `${provedor}: o vínculo passou a ser conferido DEPOIS da queima do nonce`,
+      ).toBeLessThan(queima);
+    }
   });
 });

@@ -53,7 +53,7 @@ const PUBLICA = fs.readFileSync(path.join(RAIZ, ".github/workflows/publish-image
 const ENV_EXEMPLO = fs.readFileSync(path.join(RAIZ, ".env.hostgator.example"), "utf8");
 
 /** O valor literal que este repositório publica. A âncora. */
-const NAMESPACE_DESTE_REPO = "ghcr.io/melgarafael";
+const NAMESPACE_DESTE_REPO = "ghcr.io/phns-php";
 
 /**
  * Um fork que publica as próprias imagens muda `IMG_NS` — e precisa mudar junto

@@ -293,6 +293,12 @@ const schema = z.object({
   GOOGLE_CALENDAR_CLIENT_ID: z.string().optional().default(""),
   GOOGLE_CALENDAR_CLIENT_SECRET: z.string().optional().default(""),
 
+  // Outlook / Microsoft Graph — opcional, o mesmo contrato do Google. Sem as
+  // duas, a Agenda funciona INTEIRA: some o botão "Conectar Outlook" e a tela
+  // explica o que falta. Sem flag de "enabled": estar configurado É ter o par.
+  MICROSOFT_GRAPH_CLIENT_ID: z.string().optional().default(""),
+  MICROSOFT_GRAPH_CLIENT_SECRET: z.string().optional().default(""),
+
   // Nuvemshop — opcional (template genérico open-source). Só exigidas quando
   // NUVEMSHOP_ENABLED=true; o runtime já degrada via getConfig()==null.
   NUVEMSHOP_APP_ID: z.string().optional().default(""),

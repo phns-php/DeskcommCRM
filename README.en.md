@@ -11,7 +11,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6?logo=typescript)](https://www.typescriptlang.org)
 [![Supabase](https://img.shields.io/badge/Supabase-Postgres%2BAuth%2BStorage-3ecf8e?logo=supabase)](https://supabase.com)
 [![Self-hosted](https://img.shields.io/badge/self--hosted-one%20command-orange)](hostgator-setup-kit/)
-[![CI](https://github.com/melgarafael/DeskcommCRM/actions/workflows/ci.yml/badge.svg)](https://github.com/melgarafael/DeskcommCRM/actions/workflows/ci.yml)
+[![CI](https://github.com/phns-php/DeskcommCRM/actions/workflows/ci.yml/badge.svg)](https://github.com/phns-php/DeskcommCRM/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 [**⚡ Install**](#-install-on-your-vps-the-main-path) · [**🔄 Update**](#-updating) · [**🧭 Vision**](VISION.md) · [**🏗️ Architecture**](ARCHITECTURE.md) · [**🤝 Contributing**](CONTRIBUTING.md) · [**🗺️ Roadmap**](#%EF%B8%8F-roadmap)
@@ -34,7 +34,7 @@
 > command for your case:
 >
 > ```bash
-> curl -fsSL https://raw.githubusercontent.com/melgarafael/DeskcommCRM/main/hostgator-setup-kit/comecar.sh | bash
+> curl -fsSL https://raw.githubusercontent.com/phns-php/DeskcommCRM/main/hostgator-setup-kit/comecar.sh | bash
 > ```
 >
 > *(prefer to read before executing? clone the repo and run `bash hostgator-setup-kit/comecar.sh` —
@@ -67,7 +67,7 @@ That is not a freeze: the terminal is hiding your password. Type (or paste) it a
 Once inside the VPS:
 
 ```bash
-git clone https://github.com/melgarafael/DeskcommCRM.git
+git clone https://github.com/phns-php/DeskcommCRM.git
 cd DeskcommCRM
 bash hostgator-setup-kit/install.sh
 ```
@@ -269,7 +269,7 @@ Details: [`ARCHITECTURE.md`](ARCHITECTURE.md).
 > This section is for people who will change the code.
 
 ```bash
-git clone https://github.com/melgarafael/DeskcommCRM.git
+git clone https://github.com/phns-php/DeskcommCRM.git
 cd DeskcommCRM
 
 nvm use                     # Node 22
