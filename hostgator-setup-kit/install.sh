@@ -1771,10 +1771,13 @@ begin
   end if;
   select id into v_org from public.organizations where slug='minha-empresa';
   if v_org is null then
-    -- `locale` aqui, e não só no usuário dono: é a organização que responde
-    -- pelos convidados que ainda não existem. Quem entra sem preferência
-    -- própria cai neste valor, então gravar só no dono entregaria o sistema em
-    -- português para todo mundo que ele convidasse numa instalação em espanhol.
+    -- Coluna locale aqui, e nao so no usuario dono: e a organizacao que responde
+    -- pelos convidados que ainda nao existem. Quem entra sem preferencia
+    -- propria cai neste valor, entao gravar so no dono entregaria o sistema em
+    -- portugues para todo mundo que ele convidasse numa instalacao em espanhol.
+    -- Sem crase neste heredoc: <<SQL nao e citado, e a palavra locale entre
+    -- crases vira o comando locale(1) da VPS — injeta LANGUAGE=pt no SQL e a
+    -- promocao do admin morre (medido em instalacao real).
     insert into public.organizations (slug, display_name, legal_name, locale, created_by)
     values ('minha-empresa','Minha Empresa','Minha Empresa','${APP_LOCALE:-pt-BR}', v_uid)
     returning id into v_org;

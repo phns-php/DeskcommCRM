@@ -2396,6 +2396,25 @@ reexec_neg() {
 reexec_neg
 reexec_ok "o bloco de variáveis conhecidas acha o kit depois do cd"
 
+echo "heredoc do admin: nenhuma crase (senão o bash executa comando no meio do SQL)"
+# Medido numa instalação real: a palavra locale entre crases num comentário
+# do heredoc <<SQL (NÃO citado) rodava locale(1) da VPS, injetava LANGUAGE=pt
+# no stdin do psql e a promoção do admin morria com "language is not a known
+# variable" — containers nunca subiam. O aviso na linha do platform_admins já
+# existia; este caso impede a crase de voltar em QUALQUER linha do bloco.
+{
+  corpo="$(awk '/^docker run.*<<SQL/{p=1;next} p&&/^SQL$/{exit} p' install.sh)"
+  if [ -z "$corpo" ]; then
+    printf '  ✗ não achei o heredoc <<SQL … SQL do bootstrap do admin\n'; fail=1
+  elif printf '%s' "$corpo" | grep -q '`'; then
+    printf '  ✗ crase no heredoc do admin — bash vai executar comando no meio do SQL:\n'
+    printf '%s\n' "$corpo" | grep -n '`' | sed 's/^/       /'
+    fail=1
+  else
+    printf '  ✓ heredoc do admin sem crase\n'
+  fi
+}
+
 echo "isolamento: a suíte não escreve no crontab da máquina"
 # Isto não é hipótese defensiva: os testes JÁ escreveram 10 linhas órfãs no
 # crontab do mantenedor, uma delas um `curl` com Bearer disparando a cada minuto
