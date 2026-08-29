@@ -338,6 +338,8 @@ export interface AgendamentoListado {
   donoId: string | null;
   contatoId: string | null;
   contatoNome: string | null;
+  /** De onde nasceu — `ui` | `mcp` | … Espelha `calendar_appointments.source`. */
+  origem: string;
 }
 
 export interface ParametrosDaLista {
@@ -434,7 +436,7 @@ export async function listaAgendamentos(
   let q = supabase
     .from("calendar_appointments")
     .select(
-      "id, title, starts_at, ends_at, time_zone, status, owner_user_id, contact_id, contacts(name, display_name)",
+      "id, title, starts_at, ends_at, time_zone, status, owner_user_id, contact_id, source, contacts(name, display_name)",
     )
     .eq("organization_id", organizationId)
     .order("starts_at", { ascending: true })
@@ -498,6 +500,9 @@ export async function listaAgendamentos(
       // dizer "você já tem consulta marcada, Maria". Mesma coluna que a tela do
       // produto lê, mesmo precedente de `name` antes de `display_name`.
       contatoNome: nomeDoContato(l.contacts),
+      // Sem isto o refetch da grade pintava todo compromisso como `ui` — e a
+      // marcação do agente parecia "sumida" ou "manual" conforme o olhar.
+      origem: typeof l.source === "string" && l.source ? String(l.source) : "ui",
     })),
   };
 }

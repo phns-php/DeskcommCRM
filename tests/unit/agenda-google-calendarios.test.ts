@@ -9,7 +9,11 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { contaDaAgendaPrimaria } from "@/lib/agenda/google/calendarios";
+import {
+  calendarioDestinoDaConexao,
+  contaDaAgendaPrimaria,
+  listarCalendariosDaConta,
+} from "@/lib/agenda/google/calendarios";
 import { classificarErroDoGoogle } from "@/lib/agenda/google/erros";
 
 function resposta(corpo: unknown, status = 200): Response {
@@ -87,5 +91,88 @@ describe("contaDaAgendaPrimaria", () => {
     const r = await contaDaAgendaPrimaria("t");
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.detalhe).toContain("502");
+  });
+});
+
+describe("listarCalendariosDaConta", () => {
+  it("devolve id, nome, primário e se pode escrever", async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      resposta({
+        items: [
+          {
+            id: "ana@clinica.com.br",
+            summary: "Ana",
+            primary: true,
+            accessRole: "owner",
+            timeZone: "America/Sao_Paulo",
+          },
+          {
+            id: "en.brazilian#holiday@group.v.calendar.google.com",
+            summary: "Feriados",
+            accessRole: "reader",
+            hidden: false,
+          },
+          { id: "lixo", deleted: true, summary: "apagado" },
+        ],
+      }),
+    );
+    const r = await listarCalendariosDaConta("tok");
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.calendarios).toHaveLength(2);
+    expect(r.calendarios[0]).toMatchObject({
+      externalCalendarId: "ana@clinica.com.br",
+      isPrimary: true,
+      podeEscrever: true,
+    });
+    expect(r.calendarios[1]?.podeEscrever).toBe(false);
+  });
+});
+
+describe("calendarioDestinoDaConexao", () => {
+  it("prefere is_destination, depois primary, depois o e-mail da conta", async () => {
+    const chamadas: string[] = [];
+    const admin = {
+      from: () => ({
+        select: () => ({
+          eq: (_c: string, v: unknown) => {
+            chamadas.push(String(v));
+            const cadeia = {
+              eq: () => cadeia,
+              limit: () => cadeia,
+              maybeSingle: async () => {
+                if (chamadas.includes("true") && chamadas.filter((x) => x === "true").length === 1) {
+                  // primeira query: is_destination
+                  return { data: { external_calendar_id: "trabalho@x.com" }, error: null };
+                }
+                return { data: null, error: null };
+              },
+            };
+            return cadeia;
+          },
+        }),
+      }),
+    };
+    const id = await calendarioDestinoDaConexao(admin as never, "conn-1", "ana@clinica.com.br");
+    expect(id).toBe("trabalho@x.com");
+  });
+
+  it("cai no e-mail da conta quando a tabela não tem linha", async () => {
+    const admin = {
+      from: () => ({
+        select: () => ({
+          eq: () => {
+            const cadeia = {
+              eq: () => cadeia,
+              limit: () => cadeia,
+              maybeSingle: async () => ({ data: null, error: null }),
+            };
+            return cadeia;
+          },
+        }),
+      }),
+    };
+    const id = await calendarioDestinoDaConexao(admin as never, "conn-1", "ana@clinica.com.br");
+    expect(id).toBe("ana@clinica.com.br");
   });
 });

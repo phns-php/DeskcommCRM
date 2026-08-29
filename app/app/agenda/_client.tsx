@@ -9,8 +9,9 @@ import { addDays, endOfMonth, format, startOfDay, startOfMonth, startOfWeek } fr
 import * as React from "react";
 
 import { AvisoDaConexaoGoogle } from "./_components/AvisoDaConexaoGoogle";
+import { AvisoDeCompromissoForaDaJanela } from "./_components/AvisoDeCompromissoForaDaJanela";
 import { PainelDasConexoesDaAgenda } from "./_components/PainelDasConexoesDaAgenda";
-import { PORTA_HORARIOS, PORTA_TIPOS, PortasDaAgenda } from "./_components/PortasDaAgenda";
+import { PORTA_HORARIOS, PORTA_TIPOS } from "./_components/PortasDaAgenda";
 
 import { AgendaInterativa } from "@/components/agenda/AgendaInterativa";
 import { FiltroDePessoas } from "@/components/agenda/FiltroDePessoas";
@@ -282,7 +283,10 @@ export function AgendaClient({
         linkDeConfiguracaoDoMicrosoft={linkDeConfiguracaoDoMicrosoft}
       />
 
-      <PortasDaAgenda />
+      <AvisoDeCompromissoForaDaJanela
+        recorte={recorteDaGrade}
+        onIrPara={(instante) => setAncora(startOfDay(new Date(instante)))}
+      />
 
       <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
         <div className="min-w-0">

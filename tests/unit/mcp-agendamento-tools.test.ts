@@ -238,6 +238,14 @@ describe("crm_list_appointments", () => {
 describe("as escritas de agenda", () => {
   beforeEach(() => vi.clearAllMocks());
 
+  it("a description PROÍBE afirmar sucesso quando marcado:false", () => {
+    // Sem isto o modelo inventa "pronto, está marcado" e a pessoa não acha
+    // nada na Agenda — o sintoma que parece bug de sync e é alucinação.
+    expect(crmBookAppointment.description).toMatch(/marcado:\s*true/i);
+    expect(crmBookAppointment.description).toMatch(/marcado:\s*false/i);
+    expect(crmBookAppointment.description).toMatch(/NÃO invente|nunca diga/i);
+  });
+
   it("⚠️ ApiError do handler vira RESPOSTA — exceção mataria o turno", async () => {
     // O caso que dá nome a este bloco. Numa rota HTTP lançar é certo: o wrapper
     // traduz em status. Numa ferramenta MCP a exceção sobe pela ponte e o assistente

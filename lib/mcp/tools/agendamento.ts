@@ -272,7 +272,11 @@ export const crmBookAppointment: McpToolDefinition<typeof marcarShape> = {
     "`crm_schedule_followup`. A diferença: aqui as DUAS partes combinaram e alguém vai esperar; " +
     "lá é decisão interna nossa e o cliente não sabe de nada. " +
     "Chame `crm_find_free_slots` ANTES e use um `starts_at` que veio de lá — marcar em horário que " +
-    "não está livre é recusado, e a recusa manda você consultar de novo.",
+    "não está livre é recusado, e a recusa manda você consultar de novo. " +
+    "⚠️ SÓ diga ao cliente que marcou se a resposta trouxer `marcado: true`. " +
+    "Se vier `marcado: false`, NÃO invente confirmação: leia `mensagem`, siga o que ela pede " +
+    "(em geral consultar horários de novo) e avise o cliente com honestidade — " +
+    "nunca diga 'pronto, está marcado' quando a ferramenta recusou.",
   inputSchema: marcarShape,
   category: "write",
   requiresRole: "ai_operator",

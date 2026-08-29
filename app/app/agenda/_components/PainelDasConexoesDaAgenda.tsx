@@ -1,23 +1,31 @@
 "use client";
 
+import Link from "next/link";
 import * as React from "react";
 
 import { CartaoDaConexaoCalDav } from "./CartaoDaConexaoCalDav";
 import { CartaoDaConexaoGoogle } from "./CartaoDaConexaoGoogle";
 import { CartaoDaConexaoMicrosoft } from "./CartaoDaConexaoMicrosoft";
+import { PORTA_HORARIOS, PORTA_TIPOS } from "./PortasDaAgenda";
 
+import { Button } from "@/components/ui/button";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { useT } from "@/hooks/i18n/useT";
-import { CalendarBlank, Globe, GoogleLogo } from "@/lib/ui/icons";
+import { CalendarBlank, Clock, Gear, Globe, GoogleLogo } from "@/lib/ui/icons";
 import { cn } from "@/lib/utils";
 
 type Provedor = "google" | "outlook" | "caldav";
 
 /**
- * As três conexões da Agenda como botões grandes — o formulário só abre ao clicar.
+ * Barra compacta de configuração — a grade fica em primeiro plano.
  *
- * Antes os três cartões vinham empilhados e o CalDAV já nascia com o formulário
- * aberto, ocupando metade da tela. Quem só queria ver a grade via configuração
- * antes do produto. Botão → detalhe é o mesmo gesto das portas da Agenda.
+ * Antes: três botões grandes + portas empilhadas. Agora: ícones com selo
+ * Conectado; o detalhe (conectar, calendários Google, CalDAV) abre num Sheet.
  */
 export function PainelDasConexoesDaAgenda({
   googleConfigurado,
@@ -51,37 +59,29 @@ export function PainelDasConexoesDaAgenda({
     id: Provedor;
     rotulo: string;
     icone: React.ReactNode;
-    status: string;
     conectado: boolean;
+    titulo: string;
   }> = [
     {
       id: "google",
       rotulo: "Google",
-      icone: <GoogleLogo size={20} weight="bold" aria-hidden />,
-      status: contaConectada
-        ? contaConectada
-        : googleConfigurado
-          ? t("Conectar")
-          : t("Não configurado"),
+      icone: <GoogleLogo size={18} weight="bold" aria-hidden />,
       conectado: Boolean(contaConectada),
+      titulo: contaConectada ?? t("Configurar Google"),
     },
     {
       id: "outlook",
       rotulo: "Outlook",
-      icone: <CalendarBlank size={20} weight="bold" aria-hidden />,
-      status: contaOutlook
-        ? contaOutlook
-        : microsoftConfigurado
-          ? t("Conectar")
-          : t("Não configurado"),
+      icone: <CalendarBlank size={18} weight="bold" aria-hidden />,
       conectado: Boolean(contaOutlook),
+      titulo: contaOutlook ?? t("Configurar Outlook"),
     },
     {
       id: "caldav",
       rotulo: "CalDAV",
-      icone: <Globe size={20} weight="bold" aria-hidden />,
-      status: contaCalDav ? contaCalDav : t("Conectar"),
+      icone: <Globe size={18} weight="bold" aria-hidden />,
       conectado: Boolean(contaCalDav),
+      titulo: contaCalDav ?? t("Configurar CalDAV"),
     },
   ];
 
@@ -89,74 +89,97 @@ export function PainelDasConexoesDaAgenda({
     <section
       data-testid="painel-conexoes-agenda"
       aria-label={t("Agendas externas")}
-      className="flex flex-col gap-3"
+      className="flex flex-wrap items-center gap-2"
     >
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-        {provedores.map((p) => {
-          const selecionado = aberto === p.id;
-          return (
-            <button
-              key={p.id}
-              type="button"
-              data-testid={`botao-provedor-${p.id}`}
-              aria-expanded={selecionado}
-              aria-controls={`painel-provedor-${p.id}`}
-              onClick={() => setAberto((atual) => (atual === p.id ? null : p.id))}
-              className={cn(
-                "flex min-h-[4.5rem] flex-col items-start gap-1 rounded-xl border px-4 py-3 text-left transition-colors",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2",
-                selecionado
-                  ? "border-accent bg-accent/5 shadow-sm"
-                  : "border-border bg-surface hover:border-accent/40 hover:bg-surface-elevated/60",
-                p.conectado && !selecionado && "border-success-fg/30",
-              )}
-            >
-              <span className="flex w-full items-center gap-2">
-                <span className="text-text-muted">{p.icone}</span>
-                <span className="text-sm font-semibold text-text">{p.rotulo}</span>
-                {p.conectado ? (
-                  <span className="ml-auto rounded-full bg-success-bg px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-success-fg">
-                    {t("Conectado")}
-                  </span>
-                ) : null}
-              </span>
-              <span className="w-full truncate text-xs text-text-muted" title={p.status}>
-                {p.status}
-              </span>
-            </button>
-          );
-        })}
-      </div>
+      {provedores.map((p) => (
+        <button
+          key={p.id}
+          type="button"
+          data-testid={`botao-provedor-${p.id}`}
+          title={p.titulo}
+          aria-expanded={aberto === p.id}
+          onClick={() => setAberto(p.id)}
+          className={cn(
+            "inline-flex h-9 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2",
+            p.conectado
+              ? "border-success-fg/30 bg-success-bg text-success-fg"
+              : "border-border bg-surface text-text hover:border-accent/40 hover:bg-surface-elevated/60",
+          )}
+        >
+          <span className="text-current opacity-80">{p.icone}</span>
+          <span>{p.rotulo}</span>
+          {p.conectado ? (
+            <span className="text-[10px] uppercase tracking-wide opacity-80">{t("Conectado")}</span>
+          ) : (
+            <Gear size={14} weight="bold" aria-hidden className="opacity-60" />
+          )}
+        </button>
+      ))}
 
-      {aberto === "google" ? (
-        <div id="painel-provedor-google" data-testid="detalhe-provedor-google">
-          <CartaoDaConexaoGoogle
-            configurado={googleConfigurado}
-            falta={faltaNoGoogle}
-            linkDeConfiguracao={linkDeConfiguracaoDoGoogle}
-            contaConectada={contaConectada}
-            enderecoDeRetorno={enderecoDeRetorno}
-          />
-        </div>
-      ) : null}
+      <span className="mx-1 hidden h-5 w-px bg-border sm:inline-block" aria-hidden />
 
-      {aberto === "outlook" ? (
-        <div id="painel-provedor-outlook" data-testid="detalhe-provedor-outlook">
-          <CartaoDaConexaoMicrosoft
-            configurado={microsoftConfigurado}
-            falta={faltaNoMicrosoft}
-            linkDeConfiguracao={linkDeConfiguracaoDoMicrosoft}
-            contaConectada={contaOutlook}
-            enderecoDeRetorno={enderecoDeRetornoMicrosoft}
-          />
-        </div>
-      ) : null}
+      <Button
+        asChild
+        variant="outline"
+        size="sm"
+        className="h-9 rounded-full"
+        data-testid="porta-tipos"
+      >
+        <Link href={PORTA_TIPOS}>
+          <CalendarBlank size={16} weight="bold" aria-hidden />
+          <span>{t("Tipos de agendamento")}</span>
+        </Link>
+      </Button>
+      <Button
+        asChild
+        variant="outline"
+        size="sm"
+        className="h-9 rounded-full"
+        data-testid="porta-horarios"
+      >
+        <Link href={PORTA_HORARIOS}>
+          <Clock size={16} weight="bold" aria-hidden />
+          <span>{t("Horários de atendimento")}</span>
+        </Link>
+      </Button>
 
-      {aberto === "caldav" ? (
-        <div id="painel-provedor-caldav" data-testid="detalhe-provedor-caldav">
-          <CartaoDaConexaoCalDav contaConectada={contaCalDav} />
-        </div>
-      ) : null}
+      <Sheet open={aberto !== null} onOpenChange={(v) => !v && setAberto(null)}>
+        <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-lg">
+          <SheetHeader>
+            <SheetTitle>
+              {aberto === "google"
+                ? t("Configurar Google")
+                : aberto === "outlook"
+                  ? t("Configurar Outlook")
+                  : t("Configurar CalDAV")}
+            </SheetTitle>
+          </SheetHeader>
+          <div className="mt-4 space-y-3" data-testid={aberto ? `detalhe-provedor-${aberto}` : undefined}>
+            {aberto === "google" ? (
+              <CartaoDaConexaoGoogle
+                configurado={googleConfigurado}
+                falta={faltaNoGoogle}
+                linkDeConfiguracao={linkDeConfiguracaoDoGoogle}
+                contaConectada={contaConectada}
+                enderecoDeRetorno={enderecoDeRetorno}
+              />
+            ) : null}
+            {aberto === "outlook" ? (
+              <CartaoDaConexaoMicrosoft
+                configurado={microsoftConfigurado}
+                falta={faltaNoMicrosoft}
+                linkDeConfiguracao={linkDeConfiguracaoDoMicrosoft}
+                contaConectada={contaOutlook}
+                enderecoDeRetorno={enderecoDeRetornoMicrosoft}
+              />
+            ) : null}
+            {aberto === "caldav" ? (
+              <CartaoDaConexaoCalDav contaConectada={contaCalDav} />
+            ) : null}
+          </div>
+        </SheetContent>
+      </Sheet>
     </section>
   );
 }

@@ -15,8 +15,8 @@
   ],
   "mainPath": ["tela", "cartaoOutlook", "connectMs", "callbackMs", "conexoes"],
   "nodes": [
-    { "id": "tela", "lane": "humano", "col": 1, "type": "frontend", "label": "/app/agenda", "sublabel": "grade do dia · já existia" },
-    { "id": "cartaoGoogle", "lane": "humano", "col": 2, "type": "frontend", "label": "CartaoDaConexaoGoogle", "sublabel": "OAuth da instalação + consentimento" },
+    { "id": "tela", "lane": "humano", "col": 1, "type": "frontend", "label": "/app/agenda", "sublabel": "barra compacta · Sheet por provedor" },
+    { "id": "cartaoGoogle", "lane": "humano", "col": 2, "type": "frontend", "label": "CartaoDaConexaoGoogle", "sublabel": "OAuth + seletor is_destination / ocupa" },
     { "id": "cartaoOutlook", "lane": "humano", "col": 3, "type": "frontend", "label": "CartaoDaConexaoMicrosoft", "sublabel": "mesmo contrato · Azure v2" },
     { "id": "cartaoCaldav", "lane": "humano", "col": 4, "type": "frontend", "label": "CartaoDaConexaoCalDav", "sublabel": "URL + usuário + senha de aplicativo" },
     { "id": "adminMs", "lane": "humano", "col": 2, "type": "frontend", "label": "/admin/microsoft", "sublabel": "platform admin · segredo nunca volta" },
@@ -34,7 +34,7 @@
 
     { "id": "platformMs", "lane": "banco", "col": 2, "type": "database", "label": "platform_microsoft_oauth", "sublabel": "singleton · RLS sem policy" },
     { "id": "conexoes", "lane": "banco", "col": 3, "type": "database", "label": "calendar_connections", "sublabel": "provider microsoft_graph | caldav | google_calendar" },
-    { "id": "calendarios", "lane": "banco", "col": 4, "type": "database", "label": "calendar_connection_calendars", "sublabel": "primário = e-mail da conta Graph" },
+    { "id": "calendarios", "lane": "banco", "col": 4, "type": "database", "label": "calendar_connection_calendars", "sublabel": "counts_for_conflicts · is_destination (Google)" },
     { "id": "audit", "lane": "banco", "col": 5, "type": "database", "label": "api_audit_log", "sublabel": "agenda.microsoft.conexao_* · agenda.caldav.conexao_*" }
   ],
   "edges": [

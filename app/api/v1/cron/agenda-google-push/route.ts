@@ -26,6 +26,7 @@
  */
 import { NextResponse, type NextRequest } from "next/server";
 
+import { calendarioDestinoDaConexao } from "@/lib/agenda/google/calendarios";
 import { apenasDeMembrosAtivos } from "@/lib/agenda/google/membros";
 import { apagarNoGoogle, publicarNoGoogle } from "@/lib/agenda/google/escrita";
 import type { AgendamentoParaGoogle } from "@/lib/agenda/google/evento";
@@ -154,7 +155,12 @@ async function executar(req: NextRequest): Promise<Response> {
     }
 
     const accessToken = await decryptWebhookSecret(admin, conexao.oauth_access_token_encrypted);
-    const calendario = conexao.account_email;
+    // Destino escolhido na tela (`is_destination`); fallback = primário / e-mail.
+    const calendario = await calendarioDestinoDaConexao(
+      admin,
+      conexao.id,
+      conexao.account_email,
+    );
     if (!accessToken || !calendario) {
       // Esta saída não deixava rastro NENHUM — nem log, nem coluna. Uma
       // instalação com o token indecifrável somava `falhas` para sempre sem uma

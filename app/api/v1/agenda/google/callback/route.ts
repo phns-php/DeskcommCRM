@@ -55,7 +55,11 @@ import { NOME_DO_VINCULO, vinculoConfere } from "@/lib/agenda/google/vinculo";
 import { cookieSecure } from "@/lib/supabase/cookie-secure";
 import { escoposFaltando } from "@/lib/agenda/google/oauth";
 import { trocarCodigoPorToken } from "@/lib/agenda/google/token";
-import { contaDaAgendaPrimaria } from "@/lib/agenda/google/calendarios";
+import {
+  contaDaAgendaPrimaria,
+  listarCalendariosDaConta,
+  sincronizarCalendariosNoBanco,
+} from "@/lib/agenda/google/calendarios";
 import { env } from "@/lib/env";
 
 export const dynamic = "force-dynamic";
@@ -359,44 +363,52 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     return voltar("erro=nao_consegui_guardar");
   }
 
-  // 8. REGISTRA O CALENDÁRIO PRIMÁRIO. Sem esta linha a conexão existe e não sincroniza
-  //    nada: o cron lê `calendar_connection_calendars` com `.eq("counts_for_conflicts",
-  //    true)` e, com a tabela vazia, itera ZERO calendários para sempre. Medido: até aqui
-  //    não havia UM insert nessa tabela em todo o código de produção — só em dois arquivos
-  //    de teste, que por isso passavam enquanto o produto não sincronizava nada.
-  //
-  //    Tudo o que ela pede já está na mão aqui: `external_calendar_id` é o próprio e-mail
-  //    (o comentário de `ContaDaAgenda` diz que o id do calendário primário É o e-mail), e
-  //    `counts_for_conflicts` nasce `true` — exatamente o filtro do cron.
-  //
-  //    ⚠️ SÓ O PRIMÁRIO, e é DECISÃO e não limitação: uma conta Google pode ter vários
-  //    calendários, e `contaDaAgendaPrimaria` lê um. Registrar só ele evita que a agenda de
-  //    aniversários e as assinadas de terceiros passem a ocupar horário da pessoa sem que
-  //    ela tenha escolhido. Escolher entre vários é tela, não callback — e enquanto essa
-  //    tela não existe, o palpite seguro é o calendário que é da pessoa.
+  // 8. REGISTRA OS CALENDÁRIOS. Sem linha em `calendar_connection_calendars` o
+  //    cron de sync itera ZERO e a conexão parece morta. A lista completa alimenta
+  //    o seletor da tela; o primário nasce como destino (recebe do CRM) e com
+  //    `counts_for_conflicts` — o palpite seguro até a pessoa escolher.
   if (conexaoGravada?.id) {
-    const { error: erroDoCalendario } = await admin.from("calendar_connection_calendars").upsert(
-      {
-        organization_id: organizationId,
-        connection_id: conexaoGravada.id,
-        external_calendar_id: conta.conta.email,
-        name: conta.conta.email,
-        is_primary: true,
-        // O fuso que até aqui só ia para o audit. `null` quando o Google não mandou: quem
-        // lê trata ausência como "não sei" e cai no fuso da organização — nunca em UTC,
-        // que é ausência disfarçada de escolha.
-        time_zone: conta.conta.fuso,
-      },
-      { onConflict: "organization_id,connection_id,external_calendar_id" },
-    );
-    if (erroDoCalendario) {
-      // Não derruba a conexão: ela está gravada e é o que o usuário pediu. Mas sem o
-      // calendário o sync fica mudo, então isto precisa ser VISÍVEL.
-      await audit({
-        action: "agenda.google.conexao_falhou",
+    const lista = await listarCalendariosDaConta(token.access_token);
+    if (lista.ok && lista.calendarios.length > 0) {
+      const sync = await sincronizarCalendariosNoBanco(admin, {
         organizationId,
-        metadata: { reason: "calendario_primario_nao_registrado", detalhe: erroDoCalendario.message, user_id: userId },
+        connectionId: conexaoGravada.id,
+        calendarios: lista.calendarios,
       });
+      if (!sync.ok) {
+        await audit({
+          action: "agenda.google.conexao_falhou",
+          organizationId,
+          metadata: { reason: "calendarios_nao_registrados", detalhe: sync.detalhe, user_id: userId },
+        });
+      }
+    } else {
+      // Fallback: só o primário (comportamento antigo) se a lista falhar.
+      const { error: erroDoCalendario } = await admin.from("calendar_connection_calendars").upsert(
+        {
+          organization_id: organizationId,
+          connection_id: conexaoGravada.id,
+          external_calendar_id: conta.conta.email,
+          name: conta.conta.email,
+          is_primary: true,
+          counts_for_conflicts: true,
+          is_destination: true,
+          time_zone: conta.conta.fuso,
+        },
+        { onConflict: "organization_id,connection_id,external_calendar_id" },
+      );
+      if (erroDoCalendario) {
+        await audit({
+          action: "agenda.google.conexao_falhou",
+          organizationId,
+          metadata: {
+            reason: "calendario_primario_nao_registrado",
+            detalhe: erroDoCalendario.message,
+            user_id: userId,
+            lista: lista.ok ? "vazia" : lista.detalhe,
+          },
+        });
+      }
     }
   }
 

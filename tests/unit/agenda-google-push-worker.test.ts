@@ -61,6 +61,10 @@ let gravado: Record<string, Record<string, unknown>> = {};
 let pendentes: Array<Record<string, unknown>> = [];
 /** As conexões que o banco devolve — vazio simula "não conectou". */
 let conexoes: Array<Record<string, unknown>> = [];
+/** Destino em `calendar_connection_calendars` — o push lê isto agora. */
+let calendariosDestino: Array<Record<string, unknown>> = [
+  { external_calendar_id: "ana@clinica.com.br" },
+];
 
 function linha(over: Record<string, unknown> = {}): Record<string, unknown> {
   return {
@@ -93,6 +97,7 @@ beforeEach(() => {
   conexoes = [
     { id: "conn-1", status: "healthy", oauth_access_token_encrypted: "\\xCIFRADO", account_email: "ana@clinica.com.br" },
   ];
+  calendariosDestino = [{ external_calendar_id: "ana@clinica.com.br" }];
   vi.mocked(decryptWebhookSecret).mockResolvedValue("tok-decifrado");
   vi.mocked(apenasDeMembrosAtivos).mockImplementation(async (_a, l) => [...l] as never);
   vi.mocked(publicarNoGoogle).mockResolvedValue({ ok: true, eventoId: "deskcommabc", sequence: 1 });
@@ -102,11 +107,28 @@ beforeEach(() => {
     from: (tabela: string) => ({
       select: () => {
         const cadeia: Record<string, unknown> = {};
-        for (const m of ["or", "not", "order", "limit", "eq"]) {
+        for (const m of ["or", "not", "order", "limit", "eq", "neq"]) {
           cadeia[m] = () => cadeia;
         }
+        cadeia.maybeSingle = async () => ({
+          data:
+            tabela === "calendar_connection_calendars"
+              ? (calendariosDestino[0] ?? null)
+              : tabela === "calendar_connections"
+                ? (conexoes[0] ?? null)
+                : null,
+          error: null,
+        });
         cadeia.then = (r: (v: unknown) => unknown) =>
-          r({ data: tabela === "calendar_appointments" ? pendentes : conexoes, error: null });
+          r({
+            data:
+              tabela === "calendar_appointments"
+                ? pendentes
+                : tabela === "calendar_connection_calendars"
+                  ? calendariosDestino
+                  : conexoes,
+            error: null,
+          });
         return cadeia;
       },
       update: (patch: Record<string, unknown>) => {
@@ -132,8 +154,25 @@ describe("worker da ida do Google", () => {
   it("publica o compromisso de quem tem agenda conectada", async () => {
     const r = await rodar();
     expect(publicarNoGoogle).toHaveBeenCalledTimes(1);
+    expect(publicarNoGoogle).toHaveBeenCalledWith(
+      "tok-decifrado",
+      "ana@clinica.com.br",
+      expect.any(Object),
+      null,
+    );
     expect(r.data.publicados).toBe(1);
     expect(gravado[linha().id as string]?.google_event_id).toBe("deskcommabc");
+  });
+
+  it("usa o calendário com is_destination, não só o e-mail da conta", async () => {
+    calendariosDestino = [{ external_calendar_id: "trabalho@grupo.calendar.google.com" }];
+    await rodar();
+    expect(publicarNoGoogle).toHaveBeenCalledWith(
+      "tok-decifrado",
+      "trabalho@grupo.calendar.google.com",
+      expect.any(Object),
+      null,
+    );
   });
 
   it("⚠️ SEM CONEXÃO não marca `google_synced_at` — senão a linha morre invisível", async () => {

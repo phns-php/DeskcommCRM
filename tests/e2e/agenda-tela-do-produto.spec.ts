@@ -71,11 +71,12 @@ test.describe("a Agenda como o dono do produto a usa", () => {
     await expect(page).toHaveURL(/\/app\/settings\/tenant\/agenda/, { timeout: ESPERA });
   });
 
-  test("da Agenda dá para conectar CalDAV — botão abre o formulário, não é 'em breve'", async () => {
+  test("da Agenda dá para conectar CalDAV — botão abre o Sheet com o formulário", async () => {
     await page.goto("/app/agenda");
     await expect(page.getByTestId("tela-agenda")).toBeVisible({ timeout: ESPERA });
     await expect(page.getByTestId("painel-conexoes-agenda")).toBeVisible();
     await page.getByTestId("botao-provedor-caldav").click();
+    await expect(page.getByTestId("detalhe-provedor-caldav")).toBeVisible();
     await expect(page.getByTestId("cartao-caldav")).toBeVisible();
     await expect(page.getByTestId("caldav-home-url")).toBeVisible();
     await expect(page.getByTestId("caldav-usuario")).toBeVisible();
@@ -83,11 +84,12 @@ test.describe("a Agenda como o dono do produto a usa", () => {
     await expect(page.getByTestId("conectar-caldav")).toBeVisible();
   });
 
-  test("da Agenda dá para ver o cartão do Outlook — botão abre o detalhe, não é 'em breve'", async () => {
+  test("da Agenda dá para ver o cartão do Outlook — botão abre o Sheet, não é 'em breve'", async () => {
     await page.goto("/app/agenda");
     await expect(page.getByTestId("tela-agenda")).toBeVisible({ timeout: ESPERA });
     await expect(page.getByTestId("botao-provedor-outlook")).toBeVisible();
     await page.getByTestId("botao-provedor-outlook").click();
+    await expect(page.getByTestId("detalhe-provedor-outlook")).toBeVisible();
     await expect(page.getByTestId("cartao-outlook")).toBeVisible();
   });
 

@@ -93,7 +93,21 @@ function googleRespondendoBem() {
     .mockResolvedValueOnce(
       respostaHttp({ access_token: "ya29.novo", refresh_token: "1//r", expires_in: 3599, scope: ESCOPOS, token_type: "Bearer" }),
     )
-    .mockResolvedValueOnce(respostaHttp({ id: "ana@clinica.com.br", timeZone: "America/Sao_Paulo" }));
+    .mockResolvedValueOnce(respostaHttp({ id: "ana@clinica.com.br", timeZone: "America/Sao_Paulo" }))
+    // calendarList.list — alimenta o seletor (destino + ocupação).
+    .mockResolvedValueOnce(
+      respostaHttp({
+        items: [
+          {
+            id: "ana@clinica.com.br",
+            summary: "Ana",
+            primary: true,
+            accessRole: "owner",
+            timeZone: "America/Sao_Paulo",
+          },
+        ],
+      }),
+    );
 }
 
 beforeEach(() => {
@@ -116,10 +130,17 @@ beforeEach(() => {
         return { error: erroDoNonce };
       },
       select: () => {
-        const cadeia = {
-          eq: () => cadeia,
-          maybeSingle: async () => ({ data: linhaExistente }),
-        };
+        const cadeia: Record<string, unknown> = {};
+        for (const m of ["eq", "limit", "neq", "order"]) {
+          cadeia[m] = () => cadeia;
+        }
+        cadeia.maybeSingle = async () => ({ data: linhaExistente, error: null });
+        // `sincronizarCalendariosNoBanco` pergunta se já há destino — lista vazia = primeira sync.
+        cadeia.then = (r: (v: unknown) => unknown) =>
+          r({
+            data: tabela === "calendar_connection_calendars" ? [] : linhaExistente ? [linhaExistente] : [],
+            error: null,
+          });
         return cadeia;
       },
       upsert: (linha: Record<string, unknown>, opcoes?: Record<string, unknown>) => {
@@ -207,6 +228,8 @@ describe("GET /api/v1/agenda/google/callback", () => {
       connection_id: "conexao-1",
       external_calendar_id: "ana@clinica.com.br",
       is_primary: true,
+      is_destination: true,
+      counts_for_conflicts: true,
     });
     // O fuso: qualquer valor menos `undefined` — a coluna existe desde a 0193 e o callback
     // tinha o valor na mão, gastando-o só em log.

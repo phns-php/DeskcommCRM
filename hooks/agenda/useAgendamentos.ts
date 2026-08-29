@@ -25,6 +25,7 @@ interface AgendamentoListado {
   donoId: string | null;
   contatoId: string | null;
   contatoNome: string | null;
+  origem?: string;
 }
 
 export interface RecorteDaGrade {
@@ -81,7 +82,15 @@ export function useAgendamentos(recorte: RecorteDaGrade | null) {
           responsavelId: a.donoId ?? "",
           comeca: a.iniciaEm,
           termina: a.terminaEm,
-          origem: "ui" as const,
+          // Antes era `"ui" as const` sempre — apagava a origem real no refetch e
+          // fazia a marcação do agente parecer nascida na tela.
+          origem: (a.origem === "mcp" ||
+          a.origem === "google_sync" ||
+          a.origem === "microsoft_sync" ||
+          a.origem === "caldav_sync" ||
+          a.origem === "public_page"
+            ? a.origem
+            : "ui") as Agendamento["origem"],
           situacao: a.situacao as Agendamento["situacao"],
           // Sem esta linha, montar o hook REGREDIRIA o conserto do "com quem":
           // a prop do servidor traz o nome, e o refetch o apagaria da grade.
