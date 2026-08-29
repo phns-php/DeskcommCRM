@@ -206,12 +206,13 @@ async function executar(req: NextRequest): Promise<Response> {
         agendamento: linha.id,
         organizacao: linha.organization_id,
         desfecho: efeito.classificacao.desfecho,
+        motivo: efeito.classificacao.motivo,
         detalhe: efeito.detalhe,
         operacao: cancelado ? "apagar" : "publicar",
       });
       await admin
         .from("calendar_appointments")
-        .update({ google_sync_error: `${efeito.classificacao.desfecho}: ${efeito.detalhe}` })
+        .update({ google_sync_error: efeito.detalhe })
         .eq("id", linha.id);
       continue;
     }

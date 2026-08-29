@@ -181,15 +181,19 @@ export async function publicarNoGoogle(
   const resposta = primeira.resposta;
   if (!resposta.ok) {
     const cru = await resposta.json().catch(() => ({ status: resposta.status }));
+    // A OPERAÇÃO diz ao classificador como ler o 404, e as duas leituras são
+    // opostas: num PUT de evento que tínhamos, 404 é "existia e sumiu" e pede
+    // reconciliação; num POST, o evento nunca existiu e 404 só pode ser o
+    // CALENDÁRIO que não existe. Classificar os dois como `evento_sumiu` foi o
+    // que fez a VPS registrar três vezes um diagnóstico que não descrevia nada.
+    const classificacao = classificarErroDoGoogle(cru, jaExisteLa ? "sincronizar" : "criar");
     return {
       ok: false,
-      // A OPERAÇÃO diz ao classificador como ler o 404, e as duas leituras são
-      // opostas: num PUT de evento que tínhamos, 404 é "existia e sumiu" e pede
-      // reconciliação; num POST, o evento nunca existiu e 404 só pode ser o
-      // CALENDÁRIO que não existe. Classificar os dois como `evento_sumiu` foi o
-      // que fez a VPS registrar três vezes um diagnóstico que não descrevia nada.
-      classificacao: classificarErroDoGoogle(cru, jaExisteLa ? "sincronizar" : "criar"),
-      detalhe: `HTTP ${resposta.status}`,
+      classificacao,
+      // Antes era só `HTTP 400` — o corpo do Google (reason + message) ia embora
+      // e a VPS ficava sem saber POR QUE a publicação foi recusada. Medido:
+      // log e google_sync_error repetiam "permanente: HTTP 400" a cada 5 min.
+      detalhe: detalheDaRecusa(cru, classificacao),
     };
   }
   const corpo = (await resposta.json().catch(() => ({}))) as { id?: string; sequence?: number };
@@ -229,9 +233,34 @@ export async function apagarNoGoogle(
     return { ok: true, eventoId, sequence: null };
   }
   const cru = await resposta.json().catch(() => ({ status: resposta.status }));
+  const classificacao = classificarErroDoGoogle(cru, "apagar");
   return {
     ok: false,
-    classificacao: classificarErroDoGoogle(cru, "apagar"),
-    detalhe: `HTTP ${resposta.status}`,
+    classificacao,
+    detalhe: detalheDaRecusa(cru, classificacao),
   };
+}
+
+/**
+ * O texto que a VPS e a coluna `google_sync_error` precisam ver.
+ *
+ * O classificador já monta HTTP + reason; o Google ainda manda `error.message`
+ * em prosa (ex.: timezone inválido). Sem juntar os dois, o operador só vê
+ * "HTTP 400" e não consegue consertar.
+ */
+function detalheDaRecusa(cru: unknown, classificacao: ClassificacaoDoErro): string {
+  const base = classificacao.mensagem;
+  const obj = typeof cru === "object" && cru !== null ? (cru as Record<string, unknown>) : null;
+  const erro = obj && typeof obj.error === "object" && obj.error !== null
+    ? (obj.error as Record<string, unknown>)
+    : null;
+  const msg =
+    typeof erro?.message === "string"
+      ? erro.message.trim()
+      : typeof obj?.message === "string"
+        ? obj.message.trim()
+        : "";
+  if (!msg) return base;
+  if (base.toLowerCase().includes(msg.toLowerCase())) return base;
+  return `${base} — ${msg}`;
 }
