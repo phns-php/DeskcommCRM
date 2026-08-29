@@ -180,6 +180,26 @@ describe("publicar", () => {
     }
   });
 
+  it("o detalhe da recusa traz a message do Google — senão a VPS só vê HTTP 400", async () => {
+    // Medido: log e google_sync_error repetiam "permanente: HTTP 400" sem o
+    // motivo. O corpo tinha a prosa; a escrita jogava fora.
+    vi.mocked(fetch).mockResolvedValue(
+      resposta(400, {
+        error: {
+          code: 400,
+          message: "Invalid time zone: America/Sao_PauloX",
+          errors: [{ reason: "invalidParameter", message: "Invalid time zone" }],
+        },
+      }),
+    );
+    const r = await publicarNoGoogle("tok", "cal", AGENDAMENTO);
+    expect(r.ok).toBe(false);
+    if (!r.ok) {
+      expect(r.detalhe).toMatch(/Invalid time zone/i);
+      expect(r.detalhe, "não pode voltar a ser só o número HTTP").not.toBe("HTTP 400");
+    }
+  });
+
   it("falha de REDE também é classificada — e é retentável", async () => {
     vi.mocked(fetch).mockRejectedValue(new Error("fetch failed"));
     const r = await publicarNoGoogle("tok", "cal", AGENDAMENTO);

@@ -165,14 +165,19 @@ describe("worker da ida do Google", () => {
   it("erro do Google FICA NA LINHA, não só no log", async () => {
     // Erro que só existe em log é estoque morto: `google_sync_error` é o que a
     // tela pode mostrar para a pessoa entender por que o Google não recebeu.
+    // O `detalhe` já vem montado pela escrita (HTTP + reason + message).
     vi.mocked(publicarNoGoogle).mockResolvedValue({
       ok: false,
-      classificacao: { desfecho: "sem_permissao", mensagem: "escopo faltando" } as never,
-      detalhe: "HTTP 403",
+      classificacao: {
+        desfecho: "sem_permissao",
+        mensagem: "sem permissão de escrita neste calendário — HTTP 403 (insufficientPermissions)",
+      } as never,
+      detalhe: "sem permissão de escrita neste calendário — HTTP 403 (insufficientPermissions)",
     });
     const r = await rodar();
     expect(r.data.falhas).toBe(1);
-    expect(String(gravado[linha().id as string]?.google_sync_error)).toContain("sem_permissao");
+    expect(String(gravado[linha().id as string]?.google_sync_error)).toMatch(/403/);
+    expect(String(gravado[linha().id as string]?.google_sync_error)).toMatch(/permiss/i);
     expect(
       gravado[linha().id as string]?.google_synced_at,
       "marcou como sincronizado depois de FALHAR",
