@@ -54,6 +54,23 @@ test.describe("a Agenda como o dono do produto a usa", () => {
     await expect(page.getByRole("heading", { name: "Agenda", exact: true })).toBeVisible();
   });
 
+  test("da Agenda dá para IR aos tipos e à jornada — não só ler que faltam", async () => {
+    // Tipos e horários já tinham tela. Quem abria a Agenda numa instalação nova
+    // lia o aviso e não tinha porta. Ter tela ≠ ser alcançável a partir daqui.
+    await page.goto("/app/agenda");
+    await expect(page.getByTestId("tela-agenda")).toBeVisible({ timeout: ESPERA });
+
+    const tipos = page.getByTestId("porta-tipos");
+    const horarios = page.getByTestId("porta-horarios");
+    await expect(tipos).toBeVisible();
+    await expect(horarios).toBeVisible();
+    await expect(tipos).toHaveAttribute("href", "/app/settings/tenant/agenda");
+    await expect(horarios).toHaveAttribute("href", "/app/team?aba=atendimento");
+
+    await tipos.click();
+    await expect(page).toHaveURL(/\/app\/settings\/tenant\/agenda/, { timeout: ESPERA });
+  });
+
   test("as pessoas da equipe são REAIS — o filtro deixou de ser invisível", async () => {
     // `FiltroDePessoas` devolve `null` com menos de duas pessoas. Enquanto a
     // tela do produto passava lista vazia, o filtro existia, estava provado na

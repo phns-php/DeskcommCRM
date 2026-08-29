@@ -5316,6 +5316,8 @@ export const DICIONARIO: Traducoes = {
   // funil→embudo, agendamento→cita, negócio→negocio, demanda→demanda.
   "O que está marcado, com quem, e quem atende — seu e da equipe.": { es: "Lo que está agendado, con quién, y quién atiende — tuyo y del equipo." },
   "Cadastre um tipo de agendamento para começar": { es: "Registra un tipo de cita para empezar" },
+  "Ajustes da agenda": { es: "Ajustes de la agenda" },
+  "Horários de atendimento": { es: "Horarios de atención" },
   "Período anterior": { es: "Período anterior" },
   "Próximo período": { es: "Período siguiente" },
   "Tipo de agendamento": { es: "Tipo de cita" },
