@@ -1,8 +1,13 @@
 import { addDays, startOfWeek } from "date-fns";
 import { redirect } from "next/navigation";
 
-import { enderecoDeRetorno, faltaParaConectarOGoogle, googleEstaConfigurado } from "@/lib/agenda/google/config";
-import { PROVEDOR_CALDAV, PROVEDOR_GOOGLE } from "@/lib/agenda/tipos";
+import { enderecoDeRetorno as enderecoDeRetornoGoogle, faltaParaConectarOGoogle, googleEstaConfigurado } from "@/lib/agenda/google/config";
+import {
+  enderecoDeRetorno as enderecoDeRetornoMicrosoft,
+  faltaParaConectarOMicrosoft,
+  microsoftEstaConfigurado,
+} from "@/lib/agenda/microsoft/config";
+import { PROVEDOR_CALDAV, PROVEDOR_GOOGLE, PROVEDOR_MICROSOFT } from "@/lib/agenda/tipos";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { createClient } from "@/lib/supabase/server";
 
@@ -172,20 +177,23 @@ export default async function AgendaPage() {
   // QUAL conta está conectada — o prop existia no cartão e NUNCA era passado,
   // então o ramo "Agenda conectada" era código morto e o botão "Conectar Google"
   // não sumia depois de conectar. Segunda conexão era um clique no mesmo botão.
-  const [{ data: conexao }, { data: conexaoCalDav }] = await Promise.all([
+  const [{ data: conexao }, { data: conexaoOutlook }, { data: conexaoCalDav }] = await Promise.all([
     supabase
       .from("calendar_connections")
       .select("account_email, status")
       .eq("organization_id", activeOrg.orgId)
       .eq("user_id", user.id)
-      // ⚠️ A CONSTANTE, e não o literal. Isto era `.eq("provider", "google")` — um
-      // valor que o CHECK de `calendar_connections` PROÍBE existir, então a
-      // consulta casava zero linhas SEMPRE. O efeito na tela: `contaConectada`
-      // vinha `null`, o ramo "Agenda conectada" do cartão nunca entrava, e o
-      // botão "Conectar Google" continuava aparecendo depois de a pessoa já ter
-      // conectado. Ela reconectava, o ciclo repetia.
       .eq("provider", PROVEDOR_GOOGLE)
       .neq("status", "disconnected")
+      .maybeSingle(),
+    supabase
+      .from("calendar_connections")
+      .select("account_email, status")
+      .eq("organization_id", activeOrg.orgId)
+      .eq("user_id", user.id)
+      .eq("provider", PROVEDOR_MICROSOFT)
+      .neq("status", "disconnected")
+      .limit(1)
       .maybeSingle(),
     supabase
       .from("calendar_connections")
@@ -204,19 +212,23 @@ export default async function AgendaPage() {
   // gravou a credencial pela tela seria pior que não dizer nada.
   const googleConfigurado = await googleEstaConfigurado();
   const faltaNoGoogle = googleConfigurado ? [] : await faltaParaConectarOGoogle();
+  const microsoftConfigurado = await microsoftEstaConfigurado();
+  const faltaNoMicrosoft = microsoftConfigurado ? [] : await faltaParaConectarOMicrosoft();
 
   return (
     <AgendaClient
       fusoDeApresentacao={fusoDeApresentacao}
       googleConfigurado={googleConfigurado}
+      microsoftConfigurado={microsoftConfigurado}
       contaConectada={conexao?.account_email ?? null}
+      contaOutlook={conexaoOutlook?.account_email ?? null}
       contaCalDav={conexaoCalDav?.account_email ?? null}
-      enderecoDeRetorno={enderecoDeRetorno()}
+      enderecoDeRetorno={enderecoDeRetornoGoogle()}
+      enderecoDeRetornoMicrosoft={enderecoDeRetornoMicrosoft()}
       faltaNoGoogle={faltaNoGoogle}
-      // SÓ para quem administra a INSTALAÇÃO. A tela do app OAuth vive em
-      // `/admin` e faz `notFound()` para o resto — oferecer o link a quem não
-      // pode entrar seria trocar um beco por outro.
+      faltaNoMicrosoft={faltaNoMicrosoft}
       linkDeConfiguracaoDoGoogle={user.is_platform_admin ? "/admin/google" : undefined}
+      linkDeConfiguracaoDoMicrosoft={user.is_platform_admin ? "/admin/microsoft" : undefined}
       tiposIniciais={(tipos ?? []).map((t) => ({
         id: t.id,
         nome: t.name,

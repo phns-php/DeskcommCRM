@@ -10,6 +10,7 @@ import * as React from "react";
 
 import { AvisoDaConexaoGoogle } from "./_components/AvisoDaConexaoGoogle";
 import { CartaoDaConexaoGoogle } from "./_components/CartaoDaConexaoGoogle";
+import { CartaoDaConexaoMicrosoft } from "./_components/CartaoDaConexaoMicrosoft";
 import { CartaoDaConexaoCalDav } from "./_components/CartaoDaConexaoCalDav";
 import { PORTA_HORARIOS, PORTA_TIPOS, PortasDaAgenda } from "./_components/PortasDaAgenda";
 
@@ -68,22 +69,32 @@ const VISOES: Array<{ id: VisaoDaAgenda; rotulo: string }> = [
 export function AgendaClient({
   fusoDeApresentacao,
   googleConfigurado,
+  microsoftConfigurado,
   contaConectada,
+  contaOutlook,
   contaCalDav,
   enderecoDeRetorno,
+  enderecoDeRetornoMicrosoft,
   faltaNoGoogle,
+  faltaNoMicrosoft,
   linkDeConfiguracaoDoGoogle,
+  linkDeConfiguracaoDoMicrosoft,
   tiposIniciais,
   agendamentosIniciais,
 }: {
   fusoDeApresentacao: string | null;
   googleConfigurado: boolean;
+  microsoftConfigurado: boolean;
   contaConectada?: string | null;
+  contaOutlook?: string | null;
   contaCalDav?: string | null;
   enderecoDeRetorno?: string;
+  enderecoDeRetornoMicrosoft?: string;
   faltaNoGoogle: string[];
+  faltaNoMicrosoft: string[];
   /** Preenchido só para quem administra a instalação — ver `page.tsx`. */
   linkDeConfiguracaoDoGoogle?: string;
+  linkDeConfiguracaoDoMicrosoft?: string;
   /** Tipos ativos, resolvidos no servidor: não há rota que os liste ainda. */
   tiposIniciais: Array<{
     id: string;
@@ -265,6 +276,14 @@ export function AgendaClient({
         linkDeConfiguracao={linkDeConfiguracaoDoGoogle}
         contaConectada={contaConectada}
         enderecoDeRetorno={enderecoDeRetorno}
+      />
+
+      <CartaoDaConexaoMicrosoft
+        configurado={microsoftConfigurado}
+        falta={faltaNoMicrosoft}
+        linkDeConfiguracao={linkDeConfiguracaoDoMicrosoft}
+        contaConectada={contaOutlook}
+        enderecoDeRetorno={enderecoDeRetornoMicrosoft}
       />
 
       <CartaoDaConexaoCalDav contaConectada={contaCalDav} />

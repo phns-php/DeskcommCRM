@@ -392,6 +392,8 @@ describe("aviso da conexão do Google — o contrato com quem ESCREVE o código"
   const ROTAS = [
     "app/api/v1/agenda/google/callback/route.ts",
     "app/api/v1/agenda/google/connect/route.ts",
+    "app/api/v1/agenda/microsoft/callback/route.ts",
+    "app/api/v1/agenda/microsoft/connect/route.ts",
   ];
   const DIVIDA_CONGELADA = new Set(["sem_token_de_renovacao", "segredo_indisponivel"]);
 
@@ -412,6 +414,7 @@ describe("aviso da conexão do Google — o contrato com quem ESCREVE o código"
     const escritos = codigosEscritosPelasRotas();
     expect(escritos).toContain("permissao_incompleta");
     expect(escritos).toContain("google_nao_configurado");
+    expect(escritos).toContain("outlook_nao_configurado");
     expect(
       escritos.length,
       "a varredura perdeu o rastro dos redirects; o gate seguinte deixaria " +

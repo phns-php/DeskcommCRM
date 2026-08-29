@@ -49,10 +49,15 @@ type Desfecho = {
 };
 
 const DESFECHOS: Record<string, Desfecho> = {
-  // ---- o único sucesso ----
+  // ---- o único sucesso do Google ----
   agenda_conectada: {
     formato: "nota",
     titulo: "Agenda do Google conectada.",
+    corpo: "Os compromissos que já estão lá aparecem aqui, e o que você marcar vai para lá.",
+  },
+  agenda_outlook_conectada: {
+    formato: "nota",
+    titulo: "Agenda do Outlook conectada.",
     corpo: "Os compromissos que já estão lá aparecem aqui, e o que você marcar vai para lá.",
   },
 
@@ -72,6 +77,13 @@ const DESFECHOS: Record<string, Desfecho> = {
     titulo: "Esta instalação ainda não tem a conexão com o Google configurada",
     corpo:
       "Não é nada que você tenha feito. Quem instalou o sistema precisa cadastrar as credenciais do Google — até lá, a agenda funciona normalmente, só não sincroniza.",
+    acao: "falar_com_quem_instalou",
+  },
+  outlook_nao_configurado: {
+    formato: "aviso",
+    titulo: "Esta instalação ainda não tem a conexão com o Outlook configurada",
+    corpo:
+      "Não é nada que você tenha feito. Quem instalou o sistema precisa cadastrar as credenciais do Outlook — até lá, a agenda funciona normalmente, só não sincroniza.",
     acao: "falar_com_quem_instalou",
   },
   cifra_indisponivel: {
@@ -135,7 +147,7 @@ const DESFECHOS: Record<string, Desfecho> = {
  */
 const DESCONHECIDO: Desfecho = {
   formato: "aviso",
-  titulo: "Não consegui conectar sua agenda do Google",
+  titulo: "Não consegui conectar sua agenda",
   corpo: "O resto da agenda continua funcionando normalmente. Tentar de novo costuma resolver.",
   acao: "reconectar",
 };
@@ -184,8 +196,9 @@ export function AvisoDaConexaoGoogle() {
         // `t()` aqui e não no catálogo: `DESFECHOS` é módulo, não componente,
         // e um Record de rótulos fechados se traduz no ponto de render — a
         // mesma fronteira dos outros vocabulários deste produto.
-        if (chave === "agenda_conectada") toast.success(t(desfecho.titulo), { description: t(desfecho.corpo) });
-        else toast(t(desfecho.titulo), { description: t(desfecho.corpo) });
+        if (chave === "agenda_conectada" || chave === "agenda_outlook_conectada") {
+          toast.success(t(desfecho.titulo), { description: t(desfecho.corpo) });
+        } else toast(t(desfecho.titulo), { description: t(desfecho.corpo) });
       });
     }
 

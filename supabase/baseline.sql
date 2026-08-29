@@ -17030,6 +17030,35 @@ alter table public.calendar_appointments
   add constraint calendar_appointments_source_check
   check (source in ('ui', 'mcp', 'google_sync', 'microsoft_sync', 'caldav_sync', 'public_page'));
 
+-- ---- credencial do Microsoft Graph pela tela (migration 0204) ----
+-- ⚠️ ENTRA ANTES DO BLOCO DA VARREDURA anon. Este bloco NÃO cria função; mesmo
+-- assim, apêndice depois da varredura reabre a erosão que a 0192 fechou.
+-- Clone da 0201: singleton da INSTALAÇÃO, RLS ligada, zero policies, grants
+-- revogados de anon/authenticated. O segredo nunca volta ao browser.
+create table if not exists public.platform_microsoft_oauth (
+  id smallint primary key default 1,
+  client_id text,
+  client_secret_encrypted bytea,
+  updated_at timestamptz not null default now(),
+  updated_by uuid,
+  constraint platform_microsoft_oauth_singleton check (id = 1)
+);
+
+comment on table public.platform_microsoft_oauth is
+  'O app OAuth do Microsoft Graph DESTA INSTALAÇÃO (singleton). Server-side only: RLS ligada sem policies e grants revogados de anon/authenticated — o PostgREST não a serve. O segredo nunca volta ao browser; a tela devolve apenas se existe.';
+comment on column public.platform_microsoft_oauth.client_secret_encrypted is
+  'Cifrado por fn_encrypt_oauth (pgp_sym_encrypt/aes256), a mesma cifra dos tokens em calendar_connections. Nunca gravar em claro: sem a chave mestra o save recusa.';
+
+alter table public.platform_microsoft_oauth enable row level security;
+
+revoke all on public.platform_microsoft_oauth from anon, authenticated;
+grant select, insert, update on public.platform_microsoft_oauth to service_role;
+
+drop trigger if exists trg_platform_microsoft_oauth_updated_at on public.platform_microsoft_oauth;
+create trigger trg_platform_microsoft_oauth_updated_at
+  before update on public.platform_microsoft_oauth
+  for each row execute function public.fn_set_updated_at();
+
 -- ---- VARREDURA anon: função nova nasce exposta em quem ATUALIZA (migration 0116) ----
 --
 -- ⚠️ ESTE BLOCO É, DE PROPÓSITO, O ÚLTIMO DO ARQUIVO. Apêndice novo entra ANTES

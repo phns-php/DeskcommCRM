@@ -72,9 +72,23 @@ describe("a tela da Agenda MONTA as portas — componente solto não conta", () 
     expect(fonte.includes("<CartaoDaConexaoCalDav"), "importou e não renderizou").toBe(true);
   });
 
+  it("a tela MONTA o cartão do Outlook — componente solto não conta", () => {
+    const fonte = readFileSync(join(process.cwd(), "app", "app", "agenda", "_client.tsx"), "utf8");
+    expect(fonte.includes("CartaoDaConexaoMicrosoft"), "o cartão existe e ninguém o monta").toBe(true);
+    expect(fonte.includes("<CartaoDaConexaoMicrosoft"), "importou e não renderizou").toBe(true);
+  });
+
   it("o vazio da Agenda aponta para as mesmas portas, não para onClick vazio", () => {
     const fonte = readFileSync(join(process.cwd(), "app", "app", "agenda", "_client.tsx"), "utf8");
     expect(fonte).toMatch(/EmptyAgenda[\s\S]*href:\s*PORTA_TIPOS|EmptyAgenda[\s\S]*PORTA_TIPOS/);
     expect(fonte).toMatch(/PORTA_HORARIOS/);
+  });
+
+  it("a página passa microsoftConfigurado — calcular e não entregar deixa o cartão sempre 'não configurado'", () => {
+    const fonte = readFileSync(join(process.cwd(), "app", "app", "agenda", "page.tsx"), "utf8");
+    expect(
+      fonte.includes("microsoftConfigurado={microsoftConfigurado}"),
+      "a página resolve se o Outlook está configurado e descarta o valor: o cartão nunca mostra Conectar",
+    ).toBe(true);
   });
 });

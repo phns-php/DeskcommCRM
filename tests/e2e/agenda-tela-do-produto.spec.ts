@@ -81,6 +81,12 @@ test.describe("a Agenda como o dono do produto a usa", () => {
     await expect(page.getByTestId("conectar-caldav")).toBeVisible();
   });
 
+  test("da Agenda dá para ver o cartão do Outlook — não é 'em breve'", async () => {
+    await page.goto("/app/agenda");
+    await expect(page.getByTestId("tela-agenda")).toBeVisible({ timeout: ESPERA });
+    await expect(page.getByTestId("cartao-outlook")).toBeVisible();
+  });
+
   test("as pessoas da equipe são REAIS — o filtro deixou de ser invisível", async () => {
     // `FiltroDePessoas` devolve `null` com menos de duas pessoas. Enquanto a
     // tela do produto passava lista vazia, o filtro existia, estava provado na

@@ -6103,6 +6103,7 @@ export const DICIONARIO: Traducoes = {
   // produto do Google, que muda de idioma — "Google Agenda" em pt-BR é
   // "Google Calendar" em espanhol.
   "Google Agenda": { es: "Google Calendar" },
+  "Agenda do Outlook": { es: "Agenda de Outlook" },
 
   // ─── Acervo de conhecimento da 1.8.0 (PR #354) — telas novas do merge ───
   //
@@ -6237,7 +6238,28 @@ export const DICIONARIO: Traducoes = {
   "Faltou permissão para ler e escrever na sua agenda": { es: "Faltó permiso para leer y escribir en tu agenda" },
   "Na tela do Google, algumas permissões ficaram desmarcadas. Sem elas eu não consigo ver seus horários ocupados nem enviar os agendamentos. Conecte de novo e mantenha as caixas marcadas.": { es: "En la pantalla de Google, algunos permisos quedaron sin marcar. Sin ellos no puedo ver tus horarios ocupados ni enviar las citas. Conecta de nuevo y deja las casillas marcadas." },
   "Não consegui conectar sua agenda do Google": { es: "No pude conectar tu agenda de Google" },
+  "Não consegui conectar sua agenda": { es: "No pude conectar tu agenda" },
   "O resto da agenda continua funcionando normalmente. Tentar de novo costuma resolver.": { es: "El resto de la agenda sigue funcionando normalmente. Intentar de nuevo suele resolverlo." },
+  "Agenda do Outlook conectada.": { es: "Agenda de Outlook conectada." },
+  "Esta instalação ainda não tem a conexão com o Outlook configurada": { es: "Esta instalación todavía no tiene configurada la conexión con Outlook" },
+  "Não é nada que você tenha feito. Quem instalou o sistema precisa cadastrar as credenciais do Outlook — até lá, a agenda funciona normalmente, só não sincroniza.": { es: "No es nada que hayas hecho. Quien instaló el sistema necesita registrar las credenciales de Outlook — hasta entonces, la agenda funciona con normalidad, solo no sincroniza." },
+  "Agenda do Outlook desta instalação": { es: "Agenda de Outlook de esta instalación" },
+  "Com estas duas informações, quem atende consegue conectar a agenda pessoal do Outlook e ver os compromissos do CRM lá. Elas valem para a instalação inteira — cada pessoa conecta a conta dela depois, sozinha.": { es: "Con estos dos datos, quien atiende puede conectar su agenda personal de Outlook y ver allí las citas del CRM. Valen para toda la instalación — cada persona conecta su cuenta después, por su cuenta." },
+  "Cole exatamente isto em URIs de redirecionamento, na tela de autenticação do registro de aplicativo no Azure.": { es: "Pega exactamente esto en URIs de redirección, en la pantalla de autenticación del registro de aplicación en Azure." },
+  "ID do aplicativo": { es: "Id. de la aplicación" },
+  "Segredo do cliente": { es: "Secreto de cliente" },
+  "quem já conectou a agenda vai precisar conectar de novo. A Microsoft invalida as autorizações antigas quando o aplicativo muda — não há como evitar, e ninguém perde compromisso por isso.": { es: "quien ya conectó su agenda tendrá que conectarla otra vez. Microsoft invalida las autorizaciones anteriores cuando la aplicación cambia — no hay forma de evitarlo, y nadie pierde ninguna cita por eso." },
+  "Última alteração em": { es: "Último cambio el" },
+  "Credenciais do Outlook salvas.": { es: "Credenciales de Outlook guardadas." },
+  "Sincronizar com o Outlook ainda não está disponível": { es: "Sincronizar con Outlook todavía no está disponible" },
+  "Falta cadastrar o aplicativo do Outlook desta instalação. Leva um minuto e você faz por aqui mesmo.": { es: "Falta registrar la aplicación de Outlook de esta instalación. Toma un minuto y lo haces desde aquí mismo." },
+  "Esta instalação não tem as credenciais do Outlook cadastradas — não é nada que você tenha feito. Quem instalou o sistema precisa configurar": { es: "Esta instalación no tiene las credenciales de Outlook registradas — no es nada que hayas hecho. Quien instaló el sistema necesita configurar" },
+  "Cadastrar as credenciais do Outlook": { es: "Registrar las credenciales de Outlook" },
+  "E, no Azure, registrar este endereço de retorno —": { es: "Y, en Azure, registrar esta dirección de retorno —" },
+  "Até lá a agenda funciona normalmente, só não troca compromissos com o Outlook.": { es: "Hasta entonces la agenda funciona con normalidad, solo no intercambia citas con Outlook." },
+  "Agenda do Outlook conectada:": { es: "Agenda de Outlook conectada:" },
+  "Conecte sua agenda do Outlook para ver aqui o que já está marcado lá — e enviar para lá o que for marcado aqui.": { es: "Conecta tu agenda de Outlook para ver aquí lo que ya está marcado allá — y enviar para allá lo que se marque aquí." },
+  "Conectar Outlook": { es: "Conectar Outlook" },
   "Tipo de agendamento criado.": { es: "Tipo de cita creado." },
   "Retorno": { es: "Seguimiento" },
   "Criar tipo": { es: "Crear tipo" },
