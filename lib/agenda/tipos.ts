@@ -159,7 +159,14 @@ export const ROTULO_DO_AUTOR: Record<AutorDoAgendamento, string> = {
 };
 
 /** Por qual porta o agendamento entrou. */
-export const ORIGENS_DO_AGENDAMENTO = ["ui", "mcp", "google_sync", "public_page"] as const;
+export const ORIGENS_DO_AGENDAMENTO = [
+  "ui",
+  "mcp",
+  "google_sync",
+  "microsoft_sync",
+  "caldav_sync",
+  "public_page",
+] as const;
 export type OrigemDoAgendamento = (typeof ORIGENS_DO_AGENDAMENTO)[number];
 
 /**
@@ -187,7 +194,7 @@ export const ROTULO_DA_SITUACAO_DA_CONEXAO: Record<SituacaoDaConexao, string> = 
   token_expired: "Reconecte sua agenda",
   scope_missing: "Falta permissão de calendário",
   disconnected: "Desconectada",
-  rate_limited: "O Google pediu para esperar",
+  rate_limited: "A agenda conectada pediu para esperar",
   error: "Com erro",
 };
 
@@ -234,8 +241,14 @@ export const CONEXOES_QUE_NAO_CONTAM: readonly SituacaoDaConexao[] =
   SITUACOES_DA_CONEXAO.filter((s) => !CONEXAO_CONTA_COMO_OCUPACAO[s]);
 
 /** Quem fornece a agenda conectada. */
-export const PROVEDORES_DE_AGENDA = ["google_calendar"] as const;
+export const PROVEDORES_DE_AGENDA = ["google_calendar", "microsoft_graph", "caldav"] as const;
 export type ProvedorDeAgenda = (typeof PROVEDORES_DE_AGENDA)[number];
+
+export const ROTULO_DO_PROVEDOR: Record<ProvedorDeAgenda, string> = {
+  google_calendar: "Google Calendar",
+  microsoft_graph: "Outlook",
+  caldav: "CalDAV",
+};
 
 /**
  * O provider do Google, para quem CONSULTA — e não só para quem tipa.
@@ -256,6 +269,8 @@ export type ProvedorDeAgenda = (typeof PROVEDORES_DE_AGENDA)[number];
  * não estava em nenhum dos dois — estava no literal dentro do `.eq()`.
  */
 export const PROVEDOR_GOOGLE: ProvedorDeAgenda = "google_calendar";
+export const PROVEDOR_MICROSOFT: ProvedorDeAgenda = "microsoft_graph";
+export const PROVEDOR_CALDAV: ProvedorDeAgenda = "caldav";
 
 /** O que o Google diz sobre um evento ocupar ou não a hora. */
 export const TRANSPARENCIAS_EXTERNAS = ["opaque", "transparent"] as const;

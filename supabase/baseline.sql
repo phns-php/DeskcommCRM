@@ -17004,6 +17004,32 @@ revoke execute on function public.fn_conversation_assign(uuid, uuid, uuid, text,
 grant  execute on function public.fn_conversation_assign(uuid, uuid, uuid, text, uuid, boolean)
   to authenticated, service_role;
 
+-- ---- provedores de agenda: Google, Outlook, CalDAV (migration 0203) ----
+-- ⚠️ ENTRA ANTES DO BLOCO DA VARREDURA anon. Este bloco NÃO cria função; mesmo
+-- assim, apêndice depois da varredura reabre a erosão que a 0192 fechou.
+alter table public.calendar_connections
+  add column if not exists home_url text;
+
+comment on column public.calendar_connections.home_url is
+  'Endereço da coleção CalDAV (calendar-home-set ou a agenda escolhida). NULL nos provedores OAuth. Nunca é o lugar da senha.';
+
+alter table public.calendar_connections
+  drop constraint if exists calendar_connections_provider_check;
+
+alter table public.calendar_connections
+  add constraint calendar_connections_provider_check
+  check (provider in ('google_calendar', 'microsoft_graph', 'caldav'));
+
+comment on column public.calendar_connections.provider is
+  'google_calendar | microsoft_graph | caldav. A feature pergunta capacidades (lib/agenda/capacidades.ts), nunca este nome.';
+
+alter table public.calendar_appointments
+  drop constraint if exists calendar_appointments_source_check;
+
+alter table public.calendar_appointments
+  add constraint calendar_appointments_source_check
+  check (source in ('ui', 'mcp', 'google_sync', 'microsoft_sync', 'caldav_sync', 'public_page'));
+
 -- ---- VARREDURA anon: função nova nasce exposta em quem ATUALIZA (migration 0116) ----
 --
 -- ⚠️ ESTE BLOCO É, DE PROPÓSITO, O ÚLTIMO DO ARQUIVO. Apêndice novo entra ANTES
