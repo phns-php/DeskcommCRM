@@ -19,6 +19,7 @@ import type { Tool } from 'ai';
 
 import { pickToolsFromMcp, type RuntimeHandoffSignal } from '@/lib/ai/runtime/tools';
 import { mintEphemeralToken, revokeEphemeralToken } from '@/lib/ai/runtime/mcp_token';
+import { resolverAgendaDoAgente } from '@/lib/agenda/agenda-do-agente';
 import type { McpAuthResult } from '@/lib/mcp/auth';
 import type { McpContext } from '@/lib/mcp/types';
 
@@ -68,6 +69,12 @@ export async function buildMcpTurnTools(
     agentCreatedBy: agentConfig.agentCreatedBy ?? undefined,
   });
 
+  const agendaDoAgente = agentConfig.calendarConnectionCalendarId
+    ? await resolverAgendaDoAgente(cfg.supabase, ids.organizationId, {
+        agenda: { calendar_connection_calendar_id: agentConfig.calendarConnectionCalendarId },
+      })
+    : null;
+
   const ctx: McpContext = {
     organizationId: ids.organizationId,
     role: 'ai_operator',
@@ -83,6 +90,7 @@ export async function buildMcpTurnTools(
     apiTokenId: ephemeral.id,
     requestId: ids.jobId,
     supabase: cfg.supabase,
+    agendaDoAgente,
   };
   const auth: McpAuthResult = {
     organizationId: ids.organizationId,

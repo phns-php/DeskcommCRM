@@ -34,6 +34,7 @@ function fakeConfig(agentId: string): PublishedAgentConfig {
   operatorModel: null,
   operatorToolIds: [], pipelineIds: [],
   agentCreatedBy: null,
+    calendarConnectionCalendarId: null,
   };
 }
 

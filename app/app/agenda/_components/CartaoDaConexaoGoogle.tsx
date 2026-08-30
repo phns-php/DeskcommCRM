@@ -8,6 +8,8 @@ import { useRouter } from "next/navigation";
 
 import { GoogleLogo } from "@/lib/ui/icons";
 
+import { SelecaoDeCalendariosGoogle } from "./SelecaoDeCalendariosGoogle";
+
 /**
  * O cartão da agenda conectada — e o caso que importa é o de quem NÃO tem.
  *
@@ -122,33 +124,36 @@ export function CartaoDaConexaoGoogle({
     return (
       <div
         data-testid="google-conectado"
-        className="flex items-center gap-2 rounded-lg border border-border bg-surface p-3"
+        className="rounded-lg border border-border bg-surface p-3"
       >
-        <GoogleLogo size={16} weight="bold" className="shrink-0 text-text-muted" aria-hidden />
-        <p className="min-w-0 flex-1 truncate text-sm">
-          <span className="text-text-muted">{t("Agenda conectada:")} </span>
-          <span className="font-medium">{contaConectada}</span>
-        </p>
-        <Button
-          variant="outline"
-          size="sm"
-          data-testid="desconectar-google"
-          disabled={desconectando}
-          onClick={() => {
-            setDesconectando(true);
-            void fetch("/api/v1/agenda/google/desconectar", { method: "DELETE" })
-              .then(async (r) => {
-                if (!r.ok) throw new Error(await r.text());
-                // `refresh` e não estado local: quem sabe se a conexão saiu é o
-                // servidor. Trocar o cartão no cliente repetiria o "Marcado ✓"
-                // que esta mesma entrega acabou de pagar.
-                router.refresh();
-              })
-              .catch(() => setDesconectando(false));
-          }}
-        >
-          {desconectando ? t("Desconectando…") : t("Desconectar")}
-        </Button>
+        <div className="flex items-center gap-2">
+          <GoogleLogo size={16} weight="bold" className="shrink-0 text-text-muted" aria-hidden />
+          <p className="min-w-0 flex-1 truncate text-sm">
+            <span className="text-text-muted">{t("Agenda conectada:")} </span>
+            <span className="font-medium">{contaConectada}</span>
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            data-testid="desconectar-google"
+            disabled={desconectando}
+            onClick={() => {
+              setDesconectando(true);
+              void fetch("/api/v1/agenda/google/desconectar", { method: "DELETE" })
+                .then(async (r) => {
+                  if (!r.ok) throw new Error(await r.text());
+                  // `refresh` e não estado local: quem sabe se a conexão saiu é o
+                  // servidor. Trocar o cartão no cliente repetiria o "Marcado ✓"
+                  // que esta mesma entrega acabou de pagar.
+                  router.refresh();
+                })
+                .catch(() => setDesconectando(false));
+            }}
+          >
+            {desconectando ? t("Desconectando…") : t("Desconectar")}
+          </Button>
+        </div>
+        <SelecaoDeCalendariosGoogle />
       </div>
     );
   }

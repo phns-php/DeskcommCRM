@@ -26,6 +26,8 @@
  */
 import { NextResponse, type NextRequest } from "next/server";
 
+import { lerConfigDaAgendaExterna } from "@/lib/agenda/config-externa";
+import { calendarioDestinoDaConexao } from "@/lib/agenda/google/calendarios";
 import { apenasDeMembrosAtivos } from "@/lib/agenda/google/membros";
 import { apagarNoGoogle, publicarNoGoogle } from "@/lib/agenda/google/escrita";
 import type { AgendamentoParaGoogle } from "@/lib/agenda/google/evento";
@@ -54,6 +56,8 @@ interface LinhaParaIda {
   location_kind: string;
   location_details: string | null;
   google_event_id: string | null;
+  google_calendar_id: string | null;
+  google_connection_id: string | null;
 }
 
 function autorizado(req: NextRequest): boolean {
@@ -72,7 +76,16 @@ async function executar(req: NextRequest): Promise<Response> {
   }
 
   const admin = createAdminClient();
-  const resumo = { candidatos: 0, publicados: 0, apagados: 0, falhas: 0, semConexao: 0 };
+  const resumo = {
+    candidatos: 0,
+    publicados: 0,
+    apagados: 0,
+    falhas: 0,
+    semConexao: 0,
+    syncDesligado: 0,
+  };
+  /** Cache por org: `settings.agenda.external_sync_enabled`. */
+  const espelhoPorOrg = new Map<string, boolean>();
   /**
    * POR QUE as falhas falharam — e não só quantas.
    *
@@ -93,7 +106,7 @@ async function executar(req: NextRequest): Promise<Response> {
   const { data: pendentes, error: erroLeitura } = await admin
     .from("calendar_appointments")
     .select(
-      "id, organization_id, owner_user_id, title, description, starts_at, ends_at, time_zone, status, location_kind, location_details, google_event_id",
+      "id, organization_id, owner_user_id, title, description, starts_at, ends_at, time_zone, status, location_kind, location_details, google_event_id, google_calendar_id, google_connection_id",
     )
     // ⚠️ NÃO volte a `.or("…,updated_at.gt.google_synced_at")`.
     //
@@ -130,19 +143,50 @@ async function executar(req: NextRequest): Promise<Response> {
   );
 
   for (const linha of doTime) {
-    const { data: conexoes } = await admin
-      .from("calendar_connections")
-      .select("id, status, oauth_access_token_encrypted, account_email")
-      .eq("organization_id", linha.organization_id)
-      .eq("user_id", linha.owner_user_id as string)
-      // A CONSTANTE. Era `"google"`, que o CHECK proíbe: o worker achava o
-      // compromisso pendente, não achava conexão nenhuma, contava `semConexao` e
-      // seguia. A ida CRM→Google nunca aconteceu em instalação alguma — e sem
-      // rastro, porque rodada sem efeito não audita (o que é doutrina e está
-      // certo: o defeito era não haver efeito, não a ausência de log).
-      .eq("provider", PROVEDOR_GOOGLE)
-      .eq("status", "healthy")
-      .limit(1);
+    let espelho = espelhoPorOrg.get(linha.organization_id);
+    if (espelho === undefined) {
+      const { data: org } = await admin
+        .from("organizations")
+        .select("settings")
+        .eq("id", linha.organization_id)
+        .maybeSingle();
+      espelho = lerConfigDaAgendaExterna(org?.settings as Record<string, unknown> | null)
+        .external_sync_enabled;
+      espelhoPorOrg.set(linha.organization_id, espelho);
+    }
+    if (!espelho) {
+      // Org pediu só CRM — não empurrar, e não marcar `google_synced_at` (senão
+      // a linha morre quando religarem o espelho).
+      resumo.syncDesligado += 1;
+      continue;
+    }
+
+    const conexaoPorId = linha.google_connection_id
+      ? await admin
+          .from("calendar_connections")
+          .select("id, status, oauth_access_token_encrypted, account_email")
+          .eq("organization_id", linha.organization_id)
+          .eq("id", linha.google_connection_id)
+          .eq("provider", PROVEDOR_GOOGLE)
+          .eq("status", "healthy")
+          .maybeSingle()
+      : { data: null };
+
+    const { data: conexoes } = conexaoPorId.data
+      ? { data: [conexaoPorId.data] }
+      : await admin
+          .from("calendar_connections")
+          .select("id, status, oauth_access_token_encrypted, account_email")
+          .eq("organization_id", linha.organization_id)
+          .eq("user_id", linha.owner_user_id as string)
+          // A CONSTANTE. Era `"google"`, que o CHECK proíbe: o worker achava o
+          // compromisso pendente, não achava conexão nenhuma, contava `semConexao` e
+          // seguia. A ida CRM→Google nunca aconteceu em instalação alguma — e sem
+          // rastro, porque rodada sem efeito não audita (o que é doutrina e está
+          // certo: o defeito era não haver efeito, não a ausência de log).
+          .eq("provider", PROVEDOR_GOOGLE)
+          .eq("status", "healthy")
+          .limit(1);
 
     const conexao = conexoes?.[0];
     if (!conexao?.oauth_access_token_encrypted) {
@@ -154,7 +198,10 @@ async function executar(req: NextRequest): Promise<Response> {
     }
 
     const accessToken = await decryptWebhookSecret(admin, conexao.oauth_access_token_encrypted);
-    const calendario = conexao.account_email;
+    // Destino do agente (gravado na marcação) vence o `is_destination` da conexão.
+    const calendario =
+      linha.google_calendar_id ??
+      (await calendarioDestinoDaConexao(admin, conexao.id, conexao.account_email));
     if (!accessToken || !calendario) {
       // Esta saída não deixava rastro NENHUM — nem log, nem coluna. Uma
       // instalação com o token indecifrável somava `falhas` para sempre sem uma

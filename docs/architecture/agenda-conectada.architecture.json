@@ -15,8 +15,10 @@
   ],
   "mainPath": ["tela", "cartaoOutlook", "connectMs", "callbackMs", "conexoes"],
   "nodes": [
-    { "id": "tela", "lane": "humano", "col": 1, "type": "frontend", "label": "/app/agenda", "sublabel": "grade do dia · já existia" },
-    { "id": "cartaoGoogle", "lane": "humano", "col": 2, "type": "frontend", "label": "CartaoDaConexaoGoogle", "sublabel": "OAuth da instalação + consentimento" },
+    { "id": "tela", "lane": "humano", "col": 1, "type": "frontend", "label": "/app/agenda", "sublabel": "grade só · botão Configurar Agenda Externa" },
+    { "id": "modalExterna", "lane": "humano", "col": 1, "type": "frontend", "label": "PainelDasConexoesDaAgenda", "sublabel": "switch de espelho + abas Google/Outlook/CalDAV" },
+    { "id": "configExterna", "lane": "borda", "col": 1, "type": "api", "label": "PATCH /agenda/config-externa", "sublabel": "organizations.settings.agenda.external_sync_enabled" },
+    { "id": "cartaoGoogle", "lane": "humano", "col": 2, "type": "frontend", "label": "CartaoDaConexaoGoogle", "sublabel": "OAuth + seletor is_destination / ocupa" },
     { "id": "cartaoOutlook", "lane": "humano", "col": 3, "type": "frontend", "label": "CartaoDaConexaoMicrosoft", "sublabel": "mesmo contrato · Azure v2" },
     { "id": "cartaoCaldav", "lane": "humano", "col": 4, "type": "frontend", "label": "CartaoDaConexaoCalDav", "sublabel": "URL + usuário + senha de aplicativo" },
     { "id": "adminMs", "lane": "humano", "col": 2, "type": "frontend", "label": "/admin/microsoft", "sublabel": "platform admin · segredo nunca volta" },
@@ -34,14 +36,20 @@
 
     { "id": "platformMs", "lane": "banco", "col": 2, "type": "database", "label": "platform_microsoft_oauth", "sublabel": "singleton · RLS sem policy" },
     { "id": "conexoes", "lane": "banco", "col": 3, "type": "database", "label": "calendar_connections", "sublabel": "provider microsoft_graph | caldav | google_calendar" },
-    { "id": "calendarios", "lane": "banco", "col": 4, "type": "database", "label": "calendar_connection_calendars", "sublabel": "primário = e-mail da conta Graph" },
-    { "id": "audit", "lane": "banco", "col": 5, "type": "database", "label": "api_audit_log", "sublabel": "agenda.microsoft.conexao_* · agenda.caldav.conexao_*" }
+    { "id": "calendarios", "lane": "banco", "col": 4, "type": "database", "label": "calendar_connection_calendars", "sublabel": "counts_for_conflicts · is_destination (Google)" },
+    { "id": "audit", "lane": "banco", "col": 5, "type": "database", "label": "api_audit_log", "sublabel": "agenda.microsoft.conexao_* · agenda.caldav.conexao_*" },
+    { "id": "editarAgente", "lane": "humano", "col": 5, "type": "frontend", "label": "/app/ai/agents/[id] · Operação", "sublabel": "select do calendário Google deste agente" },
+    { "id": "configAgente", "lane": "banco", "col": 5, "type": "database", "label": "ai_agents.config.agenda", "sublabel": "calendar_connection_calendar_id" },
+    { "id": "runtimeAgenda", "lane": "adapter", "col": 5, "type": "service", "label": "resolverAgendaDoAgente", "sublabel": "dono + destino nas tools MCP" }
   ],
   "edges": [
-    { "id": "e1", "from": "tela", "to": "cartaoGoogle", "label": "cartão que já existia" },
-    { "id": "e2", "from": "tela", "to": "cartaoCaldav", "label": "formulário sempre visível — não falta app OAuth" },
+    { "id": "e0", "from": "tela", "to": "modalExterna", "label": "abre o modal" },
+    { "id": "e1", "from": "modalExterna", "to": "cartaoGoogle", "label": "aba Google" },
+    { "id": "e2", "from": "modalExterna", "to": "cartaoCaldav", "label": "aba CalDAV — formulário sempre visível" },
+    { "id": "e31", "from": "modalExterna", "to": "configExterna", "label": "liga/desliga o espelho" },
+    { "id": "e32", "from": "configExterna", "to": "audit", "label": "agenda.external_sync_configurada" },
     { "id": "e3", "from": "cartaoGoogle", "to": "conexoes", "label": "lê provider=google_calendar da sessão" },
-    { "id": "e16", "from": "tela", "to": "cartaoOutlook", "label": "só aparece o botão quando o adapter existe" },
+    { "id": "e16", "from": "modalExterna", "to": "cartaoOutlook", "label": "aba Outlook — só configura quando o adapter existe" },
     { "id": "e17", "from": "cartaoOutlook", "to": "connectMs", "label": "GET — o navegador abre o consentimento" },
     { "id": "e18", "from": "cartaoOutlook", "to": "delMs", "label": "DELETE — a própria pessoa" },
     { "id": "e19", "from": "cartaoOutlook", "to": "conexoes", "label": "lê provider=microsoft_graph da sessão" },
@@ -67,7 +75,12 @@
     { "id": "e12", "from": "del", "to": "conexoes", "label": "status disconnected + senha null + home_url null" },
     { "id": "e13", "from": "del", "to": "audit", "label": "conexao_desconectada por id" },
     { "id": "e14", "from": "calendarios", "to": "conexoes", "label": "FK connection_id" },
-    { "id": "e15", "from": "cartaoCaldav", "to": "conexoes", "label": "lê provider=caldav da sessão" }
+    { "id": "e15", "from": "cartaoCaldav", "to": "conexoes", "label": "lê provider=caldav da sessão" },
+    { "id": "e33", "from": "editarAgente", "to": "calendarios", "label": "lista Google saudáveis da org" },
+    { "id": "e34", "from": "editarAgente", "to": "configAgente", "label": "grava o ponteiro" },
+    { "id": "e35", "from": "configAgente", "to": "runtimeAgenda", "label": "turno lê o binding" },
+    { "id": "e36", "from": "runtimeAgenda", "to": "calendarios", "label": "só se Google saudável" },
+    { "id": "e37", "from": "configExterna", "to": "runtimeAgenda", "label": "espelho off → binding some" }
   ],
   "cards": [
     {

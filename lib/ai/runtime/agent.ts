@@ -44,6 +44,7 @@ import { sendFinalResponse } from "./finalize";
 import { finalizeHandoff } from "./handoff";
 import { loadHistoryWithBudget } from "./history";
 import { mintEphemeralToken, revokeEphemeralToken } from "./mcp_token";
+import { resolverAgendaDoAgente } from "@/lib/agenda/agenda-do-agente";
 import { pickToolsFromMcp, type RuntimeHandoffSignal } from "./tools";
 import { serializeSteps } from "./serialize";
 import {
@@ -116,6 +117,7 @@ interface AgentRow {
   id: string;
   organization_id: string;
   created_by: string | null;
+  config: Record<string, unknown> | null;
 }
 
 function buildSentinelRegex(keywords: string[]): RegExp | null {
@@ -281,7 +283,7 @@ export async function runAgent(input: RunAgentInput): Promise<RunAgentResult> {
 
     const { data: agentRaw } = await admin
       .from("ai_agents")
-      .select("id, organization_id, created_by")
+      .select("id, organization_id, created_by, config")
       .eq("id", run.agent_id)
       .eq("organization_id", run.organization_id)
       .maybeSingle();
@@ -434,6 +436,11 @@ export async function runAgent(input: RunAgentInput): Promise<RunAgentResult> {
         "role:ai_operator",
       ],
     };
+    const agendaDoAgente = await resolverAgendaDoAgente(
+      admin,
+      run.organization_id,
+      agent?.config ?? null,
+    );
     const ctx: McpContext = {
       organizationId: run.organization_id,
       role: "ai_operator",
@@ -441,6 +448,7 @@ export async function runAgent(input: RunAgentInput): Promise<RunAgentResult> {
       apiTokenId: ephemeral.id,
       requestId: run.id,
       supabase: admin,
+      agendaDoAgente,
     };
     const handoffSignal: RuntimeHandoffSignal = { triggered: false };
     const tools = pickToolsFromMcp({

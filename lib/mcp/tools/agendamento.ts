@@ -32,7 +32,12 @@ import {
 } from "@/app/api/v1/agenda/agendamentos/_handler";
 import { ApiError } from "@/lib/api/types";
 import { SITUACOES_DO_AGENDAMENTO } from "@/lib/agenda/tipos";
-import type { McpToolDefinition } from "@/lib/mcp/types";
+import type { McpContext, McpToolDefinition } from "@/lib/mcp/types";
+
+/** Binding da tela vence o que o modelo inventar — um agente, um calendário. */
+function donoDaAgenda(ctx: McpContext, informado?: string): string | undefined {
+  return ctx.agendaDoAgente?.ownerUserId ?? informado;
+}
 
 /** Teto do horizonte pedido — espelha o da rota, e o excesso é erro de chamada. */
 const DIAS_PADRAO = 14;
@@ -102,7 +107,8 @@ export const crmFindFreeSlots: McpToolDefinition<typeof horariosLivresShape> = {
 
     const consulta = await horariosLivresDaOrg(ctx.supabase, ctx.organizationId, {
       eventTypeSlug: input.event_type_slug,
-      ownerUserId: input.owner_user_id ?? null,
+      ownerUserId: donoDaAgenda(ctx, input.owner_user_id) ?? null,
+      externalCalendarId: ctx.agendaDoAgente?.externalCalendarId ?? null,
       de,
       ate,
       agora,
@@ -177,7 +183,8 @@ export const crmListAppointments: McpToolDefinition<typeof listarShape> = {
       contactId: input.contact_id ?? null,
       leadId: input.lead_id ?? null,
       dia: input.dia ?? null,
-      ownerUserId: input.owner_user_id ?? null,
+      ownerUserId: donoDaAgenda(ctx, input.owner_user_id) ?? null,
+      googleCalendarId: ctx.agendaDoAgente?.externalCalendarId ?? null,
       situacao: input.situacao ?? null,
       limite: input.limite ?? 20,
     });
@@ -272,7 +279,11 @@ export const crmBookAppointment: McpToolDefinition<typeof marcarShape> = {
     "`crm_schedule_followup`. A diferença: aqui as DUAS partes combinaram e alguém vai esperar; " +
     "lá é decisão interna nossa e o cliente não sabe de nada. " +
     "Chame `crm_find_free_slots` ANTES e use um `starts_at` que veio de lá — marcar em horário que " +
-    "não está livre é recusado, e a recusa manda você consultar de novo.",
+    "não está livre é recusado, e a recusa manda você consultar de novo. " +
+    "⚠️ SÓ diga ao cliente que marcou se a resposta trouxer `marcado: true`. " +
+    "Se vier `marcado: false`, NÃO invente confirmação: leia `mensagem`, siga o que ela pede " +
+    "(em geral consultar horários de novo) e avise o cliente com honestidade — " +
+    "nunca diga 'pronto, está marcado' quando a ferramenta recusou.",
   inputSchema: marcarShape,
   category: "write",
   requiresRole: "ai_operator",
@@ -294,9 +305,17 @@ export const crmBookAppointment: McpToolDefinition<typeof marcarShape> = {
           event_type_id: tipo.id,
           starts_at: input.starts_at,
           contact_id: input.contact_id,
-          ...(input.owner_user_id ? { owner_user_id: input.owner_user_id } : {}),
+          ...(donoDaAgenda(ctx, input.owner_user_id)
+            ? { owner_user_id: donoDaAgenda(ctx, input.owner_user_id) }
+            : {}),
           ...(input.title ? { title: input.title } : {}),
           ...(input.notes ? { notes: input.notes } : {}),
+          ...(ctx.agendaDoAgente
+            ? {
+                google_calendar_id: ctx.agendaDoAgente.externalCalendarId,
+                google_connection_id: ctx.agendaDoAgente.connectionId,
+              }
+            : {}),
         },
       );
       return { marcado: true, compromisso: r };

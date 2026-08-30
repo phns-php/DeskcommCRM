@@ -33,6 +33,8 @@ let tokensGravados: Array<string | null>;
 
 const FUSO_DA_ORG = "America/Sao_Paulo";
 const ORG_DO_TESTE = "org-1";
+/** Knob da org — ausente = espelho ligado (não quebra quem já sincroniza). */
+let settingsDaOrg: Record<string, unknown> = {};
 
 function admin() {
   return {
@@ -48,7 +50,13 @@ function admin() {
             // `organizations` é lida com `.in(...)` para resolver o fuso de fallback do sync.
             in: () =>
               tabela === "organizations"
-                ? { then: (r: (v: unknown) => void) => r({ data: [{ id: ORG_DO_TESTE, timezone: FUSO_DA_ORG }], error: null }) }
+                ? {
+                    then: (r: (v: unknown) => void) =>
+                      r({
+                        data: [{ id: ORG_DO_TESTE, timezone: FUSO_DA_ORG, settings: settingsDaOrg }],
+                        error: null,
+                      }),
+                  }
                 : { then: (r: (v: unknown) => void) => r({ data: [], error: null }) },
             then: (resolver: (v: unknown) => void) => resolver({ data: jaGuardados, error: null }),
           };
@@ -112,6 +120,7 @@ beforeEach(() => {
   apagados = [];
   removidos = 0;
   tokensGravados = [];
+  settingsDaOrg = {};
   vi.stubGlobal("fetch", vi.fn());
   vi.mocked(audit).mockClear();
   vi.mocked(decryptWebhookSecret).mockResolvedValue("ya29.token");
@@ -273,6 +282,20 @@ describe("sincronizarAgendasDoGoogle", () => {
 
     expect(r.reconciliados).toBe(0);
     expect(apagados).toEqual([]);
+  });
+
+  it("org com espelho desligado não puxa o Google", async () => {
+    settingsDaOrg = { agenda: { external_sync_enabled: false } };
+    vi.mocked(fetch).mockResolvedValue(pagina({ items: [eventoDeTerceiro], nextSyncToken: "T1" }));
+
+    const r = await sincronizarAgendasDoGoogle(admin(), {
+      agora: AGORA,
+      calendarios: [calendario()],
+    });
+
+    expect(r.calendarios).toBe(0);
+    expect(r.gravados).toBe(0);
+    expect(fetch).not.toHaveBeenCalled();
   });
 
   it("rodada sem calendário não audita", async () => {

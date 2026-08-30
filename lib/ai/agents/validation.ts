@@ -179,6 +179,7 @@ export const agentMcpCreateSchema = z
     description: z.string().trim().max(2000).optional(),
     priority: z.number().int().min(0).max(1000).default(0),
     version: versionShapeSchema,
+    calendar_connection_calendar_id: UUID.nullable().optional(),
   })
   .strict();
 

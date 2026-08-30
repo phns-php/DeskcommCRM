@@ -415,8 +415,16 @@ function BlocoDeAgendamento({
         className="absolute inset-y-0 left-0 w-[3px] rounded-l-sm"
         style={{ backgroundColor: doGoogle ? "var(--color-border-strong)" : corDaTrilha(trilha) }}
       />
-      <span className="ml-1 truncate text-[11px] font-semibold leading-4 text-text">
-        {agendamento.titulo}
+      <span className="ml-1 flex min-w-0 items-center gap-1 truncate text-[11px] font-semibold leading-4 text-text">
+        <span className="truncate">{agendamento.titulo}</span>
+        {agendamento.origem === "mcp" ? (
+          <span
+            data-testid={`origem-ia-${agendamento.id}`}
+            className="shrink-0 rounded bg-accent/15 px-1 text-[9px] font-medium uppercase tracking-wide text-accent"
+          >
+            {t("IA")}
+          </span>
+        ) : null}
       </span>
       {duracao >= 45 && (
         <span className="ml-1 truncate text-[10px] leading-3 tabular-nums text-text-muted">

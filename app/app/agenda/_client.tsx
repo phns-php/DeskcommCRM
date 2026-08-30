@@ -9,10 +9,9 @@ import { addDays, endOfMonth, format, startOfDay, startOfMonth, startOfWeek } fr
 import * as React from "react";
 
 import { AvisoDaConexaoGoogle } from "./_components/AvisoDaConexaoGoogle";
-import { CartaoDaConexaoGoogle } from "./_components/CartaoDaConexaoGoogle";
-import { CartaoDaConexaoMicrosoft } from "./_components/CartaoDaConexaoMicrosoft";
-import { CartaoDaConexaoCalDav } from "./_components/CartaoDaConexaoCalDav";
-import { PORTA_HORARIOS, PORTA_TIPOS, PortasDaAgenda } from "./_components/PortasDaAgenda";
+import { AvisoDeCompromissoForaDaJanela } from "./_components/AvisoDeCompromissoForaDaJanela";
+import { PainelDasConexoesDaAgenda } from "./_components/PainelDasConexoesDaAgenda";
+import { PORTA_HORARIOS, PORTA_TIPOS } from "./_components/PortasDaAgenda";
 
 import { AgendaInterativa } from "@/components/agenda/AgendaInterativa";
 import { FiltroDePessoas } from "@/components/agenda/FiltroDePessoas";
@@ -79,6 +78,7 @@ export function AgendaClient({
   faltaNoMicrosoft,
   linkDeConfiguracaoDoGoogle,
   linkDeConfiguracaoDoMicrosoft,
+  sincronizacaoExternaInicial = true,
   tiposIniciais,
   agendamentosIniciais,
 }: {
@@ -95,6 +95,8 @@ export function AgendaClient({
   /** Preenchido só para quem administra a instalação — ver `page.tsx`. */
   linkDeConfiguracaoDoGoogle?: string;
   linkDeConfiguracaoDoMicrosoft?: string;
+  /** Espelhar Google/Outlook/CalDAV — `organizations.settings.agenda`. */
+  sincronizacaoExternaInicial?: boolean;
   /** Tipos ativos, resolvidos no servidor: não há rota que os liste ainda. */
   tiposIniciais: Array<{
     id: string;
@@ -270,25 +272,10 @@ export function AgendaClient({
         <AvisoDaConexaoGoogle />
       </React.Suspense>
 
-      <CartaoDaConexaoGoogle
-        configurado={googleConfigurado}
-        falta={faltaNoGoogle}
-        linkDeConfiguracao={linkDeConfiguracaoDoGoogle}
-        contaConectada={contaConectada}
-        enderecoDeRetorno={enderecoDeRetorno}
+      <AvisoDeCompromissoForaDaJanela
+        recorte={recorteDaGrade}
+        onIrPara={(instante) => setAncora(startOfDay(new Date(instante)))}
       />
-
-      <CartaoDaConexaoMicrosoft
-        configurado={microsoftConfigurado}
-        falta={faltaNoMicrosoft}
-        linkDeConfiguracao={linkDeConfiguracaoDoMicrosoft}
-        contaConectada={contaOutlook}
-        enderecoDeRetorno={enderecoDeRetornoMicrosoft}
-      />
-
-      <CartaoDaConexaoCalDav contaConectada={contaCalDav} />
-
-      <PortasDaAgenda />
 
       <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
         <div className="min-w-0">
@@ -297,7 +284,21 @@ export function AgendaClient({
             {t("O que está marcado, com quem, e quem atende — seu e da equipe.")}
           </p>
         </div>
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+          <PainelDasConexoesDaAgenda
+            googleConfigurado={googleConfigurado}
+            microsoftConfigurado={microsoftConfigurado}
+            contaConectada={contaConectada}
+            contaOutlook={contaOutlook}
+            contaCalDav={contaCalDav}
+            enderecoDeRetorno={enderecoDeRetorno}
+            enderecoDeRetornoMicrosoft={enderecoDeRetornoMicrosoft}
+            faltaNoGoogle={faltaNoGoogle}
+            faltaNoMicrosoft={faltaNoMicrosoft}
+            linkDeConfiguracaoDoGoogle={linkDeConfiguracaoDoGoogle}
+            linkDeConfiguracaoDoMicrosoft={linkDeConfiguracaoDoMicrosoft}
+            sincronizacaoExternaInicial={sincronizacaoExternaInicial}
+          />
           <Button variant="outline" size="sm" onClick={() => setAncora(new Date())}>
             {t("Hoje")}
           </Button>

@@ -52,6 +52,7 @@ const AGENT: PublishedAgentConfig = {
   operatorModel: null,
   operatorToolIds: [], pipelineIds: [],
   agentCreatedBy: null,
+  calendarConnectionCalendarId: null,
 };
 
 function contextResult(overrides: Partial<LeadContextResult & { ok: true }> = {}): LeadContextResult {

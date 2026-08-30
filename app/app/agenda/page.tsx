@@ -1,6 +1,7 @@
 import { addDays, startOfWeek } from "date-fns";
 import { redirect } from "next/navigation";
 
+import { lerConfigDaAgendaExterna } from "@/lib/agenda/config-externa";
 import { enderecoDeRetorno as enderecoDeRetornoGoogle, faltaParaConectarOGoogle, googleEstaConfigurado } from "@/lib/agenda/google/config";
 import {
   enderecoDeRetorno as enderecoDeRetornoMicrosoft,
@@ -103,7 +104,7 @@ export default async function AgendaPage() {
     supabase
       .from("calendar_appointments")
       .select(
-        "id, title, starts_at, ends_at, status, owner_user_id, contact_id, event_type_id, location_kind, contacts(name, display_name)",
+        "id, title, starts_at, ends_at, status, owner_user_id, contact_id, event_type_id, location_kind, source, contacts(name, display_name)",
       )
       .eq("organization_id", activeOrg.orgId)
       .gte("starts_at", inicio.toISOString())
@@ -161,18 +162,34 @@ export default async function AgendaPage() {
    * O dono vem por `connection_id → calendar_connections.user_id`, porque esta
    * tabela não tem `user_id` — é a mesma junção que `ocupados.ts` já faz.
    */
-  const { data: externos } = await supabase
-    .from("calendar_external_events")
-    .select("id, starts_at, ends_at, status, transparency, calendar_connections!inner(user_id)")
-    .eq("organization_id", activeOrg.orgId)
-    .gte("starts_at", inicio.toISOString())
-    .lt("starts_at", fim.toISOString())
-    // `transparent` no Google é "livre": o evento existe e não ocupa. Trazê-lo
-    // como bloco diria que o horário está tomado quando a própria pessoa marcou
-    // que não está.
-    .neq("transparency", "transparent")
-    .neq("status", "cancelled")
-    .order("starts_at");
+  const { data: orgSettingsRow } = await supabase
+    .from("organizations")
+    .select("settings")
+    .eq("id", activeOrg.orgId)
+    .maybeSingle();
+  const sincronizacaoExterna = lerConfigDaAgendaExterna(
+    orgSettingsRow?.settings as Record<string, unknown> | null,
+  ).external_sync_enabled;
+
+  // Sem espelho externo, a grade é só CRM — não misturar "Ocupado" do Google.
+  const { data: externos } = sincronizacaoExterna
+    ? await supabase
+        .from("calendar_external_events")
+        .select("id, starts_at, ends_at, status, transparency, calendar_connections!inner(user_id)")
+        .eq("organization_id", activeOrg.orgId)
+        .gte("starts_at", inicio.toISOString())
+        .lt("starts_at", fim.toISOString())
+        .neq("transparency", "transparent")
+        .neq("status", "cancelled")
+        .order("starts_at")
+    : { data: [] as Array<{
+        id: string;
+        starts_at: string;
+        ends_at: string;
+        status: string;
+        transparency: string | null;
+        calendar_connections: { user_id: string } | { user_id: string }[] | null;
+      }> };
 
   // QUAL conta está conectada — o prop existia no cartão e NUNCA era passado,
   // então o ramo "Agenda conectada" era código morto e o botão "Conectar Google"
@@ -229,6 +246,7 @@ export default async function AgendaPage() {
       faltaNoMicrosoft={faltaNoMicrosoft}
       linkDeConfiguracaoDoGoogle={user.is_platform_admin ? "/admin/google" : undefined}
       linkDeConfiguracaoDoMicrosoft={user.is_platform_admin ? "/admin/microsoft" : undefined}
+      sincronizacaoExternaInicial={sincronizacaoExterna}
       tiposIniciais={(tipos ?? []).map((t) => ({
         id: t.id,
         nome: t.name,
@@ -250,7 +268,13 @@ export default async function AgendaPage() {
         responsavelId: a.owner_user_id ?? "",
         comeca: a.starts_at,
         termina: a.ends_at,
-        origem: "ui" as const,
+        origem: (a.source === "mcp" ||
+        a.source === "google_sync" ||
+        a.source === "microsoft_sync" ||
+        a.source === "caldav_sync" ||
+        a.source === "public_page"
+          ? a.source
+          : "ui") as AgendamentoDaTela["origem"],
         situacao: a.status as "confirmed",
         // "com quem" é a promessa do subtítulo desta tela, e era a única parte
         // dela que o servidor não entregava: `contact_id` vinha no select e

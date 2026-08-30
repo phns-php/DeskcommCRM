@@ -101,11 +101,21 @@ test.describe("conectar a agenda do Google", () => {
     // elementos → strict mode → vermelho. A spec irmã já tinha pago isto.
     await expect(page.getByRole("heading", { name: "Agenda", exact: true })).toBeVisible();
 
-    // 2. O BOTÃO NÃO APARECE — e não é "aparece desabilitado". Desabilitado
-    //    diria "você não pode"; o certo é "esta instalação ainda não tem".
+    // 2. Na página só o botão do modal — Google/Outlook/CalDAV não poluem a grade.
+    await expect(page.getByTestId("botao-configurar-agenda-externa")).toBeVisible();
+    await expect(page.getByTestId("conectar-google")).toHaveCount(0);
+    await expect(page.getByTestId("google-nao-configurado")).toHaveCount(0);
+
+    // 3. A explicação mora no modal › aba Google (não no topo da Agenda).
+    await page.getByTestId("botao-configurar-agenda-externa").click();
+    await expect(page.getByTestId("modal-agenda-externa")).toBeVisible();
+    await page.getByTestId("aba-google").click();
+
+    // 4. O BOTÃO DE CONECTAR NÃO APARECE — e não é "aparece desabilitado".
+    //    Desabilitado diria "você não pode"; o certo é "esta instalação ainda não tem".
     await expect(page.getByTestId("conectar-google")).toHaveCount(0);
 
-    // 3. E NO LUGAR DELE há explicação, com três propriedades que importam:
+    // 5. E NO LUGAR DELE há explicação, com três propriedades que importam:
     const explicacao = page.getByTestId("google-nao-configurado");
     await expect(explicacao).toBeVisible();
     //    (a) não culpa quem está lendo
@@ -115,7 +125,7 @@ test.describe("conectar a agenda do Google", () => {
     //    (c) diz o que continua funcionando — senão a pessoa acha que a agenda quebrou
     await expect(explicacao).toContainText(/funciona normalmente/i);
 
-    // 4. E o texto NÃO despeja código: nada de nome de variável com underscore
+    // 6. E o texto NÃO despeja código: nada de nome de variável com underscore
     //    no meio da frase para quem não programa. A exceção é o bloco `o-que-falta`,
     //    que é deliberadamente o nome técnico da chave — quem instalou precisa dele.
     const corpo = await explicacao.innerText();

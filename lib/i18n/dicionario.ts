@@ -2197,6 +2197,55 @@ export const DICIONARIO: Traducoes = {
   },
   Conectando: { es: "Conectando" },
   Conectado: { es: "Conectado" },
+  "Agendas externas": { es: "Agendas externas" },
+  "Não configurado": { es: "No configurado" },
+  "Há compromisso fora desta visão": { es: "Hay un compromiso fuera de esta vista" },
+  "marcado pela IA": { es: "marcado por la IA" },
+  "Ir para a data": { es: "Ir a la fecha" },
+  "Ocupa horário": { es: "Ocupa horario" },
+  "Recebe agendamentos do CRM": { es: "Recibe citas del CRM" },
+  "Atualizar lista de agendas": { es: "Actualizar lista de agendas" },
+  "Qual agenda do Google usar": { es: "Qué agenda de Google usar" },
+  "Configurar agendas": { es: "Configurar agendas" },
+  "Tipos e horários": { es: "Tipos y horarios" },
+  "Ocupa horário entra na disponibilidade. Recebe do CRM é para onde vão as marcações daqui.": {
+    es: "Ocupa horario entra en la disponibilidad. Recibe del CRM es a dónde van las citas de aquí.",
+  },
+  "Nenhum calendário listado. Clique em atualizar ou reconecte o Google.": {
+    es: "Ningún calendario listado. Actualiza la lista o vuelve a conectar Google.",
+  },
+  principal: { es: "principal" },
+  "Configurar Google": { es: "Configurar Google" },
+  "Configurar Outlook": { es: "Configurar Outlook" },
+  "Configurar CalDAV": { es: "Configurar CalDAV" },
+  "Configurar Agenda Externa": { es: "Configurar agenda externa" },
+  "Agenda Google deste agente": { es: "Agenda de Google de este agente" },
+  "Marcações, consultas, remarcações e cancelamentos deste agente usam o calendário escolhido. Assim cada profissional pode ter o próprio agente.": {
+    es: "Las reservas, consultas, reprogramaciones y cancelaciones de este agente usan el calendario elegido. Así cada profesional puede tener su propio agente.",
+  },
+  "A conexão externa está desligada. Ligue em Agenda › Configurar Agenda Externa para o agente usar o Google.": {
+    es: "La conexión externa está desactivada. Actívala en Agenda › Configurar agenda externa para que el agente use Google.",
+  },
+  "Nenhum calendário Google conectado. Conecte o Google em Agenda › Configurar Agenda Externa.": {
+    es: "Ningún calendario de Google conectado. Conecta Google en Agenda › Configurar agenda externa.",
+  },
+  "Calendário Google": { es: "Calendario de Google" },
+  "Nenhum — usa o responsável do tipo de agendamento": {
+    es: "Ninguno — usa el responsable del tipo de cita",
+  },
+  "Ativar conexão externa": { es: "Activar conexión externa" },
+  "Escolha se as marcações ficam só no CRM ou também espelham o servidor de agenda conectado.": {
+    es: "Elige si las citas quedan solo en el CRM o también reflejan el servidor de agenda conectado.",
+  },
+  "Ligado: a Agenda do CRM espelha o servidor configurado (ocupação e envio das marcações).": {
+    es: "Activado: la Agenda del CRM refleja el servidor configurado (ocupación y envío de citas).",
+  },
+  "Desligado: as marcações ficam apenas na Agenda do CRM — sem enviar nem importar do Google, Outlook ou CalDAV.": {
+    es: "Desactivado: las citas quedan solo en la Agenda del CRM — sin enviar ni importar de Google, Outlook o CalDAV.",
+  },
+  "Com a conexão externa desligada, configure Google, Outlook ou CalDAV depois de ativar o espelho.": {
+    es: "Con la conexión externa desactivada, configura Google, Outlook o CalDAV después de activar el espejo.",
+  },
   "Token expirado": { es: "Token expirado" },
   "Permissão faltando": { es: "Permiso faltante" },
   Desconectado: { es: "Desconectado" },

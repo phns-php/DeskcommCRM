@@ -140,6 +140,14 @@ test.describe("A aba do papel que organiza o sistema", () => {
     await expect(painel.locator('[role="switch"]')).toHaveCount(2);
   });
 
+  test("a aba oferece a agenda Google deste agente — visível, não só no DOM", async () => {
+    await abrirAbaDoOperador();
+    const secao = pagina.getByTestId("agenda-do-agente");
+    await expect(secao).toBeVisible();
+    const altura = await secao.evaluate((el) => el.getBoundingClientRect().height);
+    expect(altura, "a seção está no DOM e não ocupa espaço na tela").toBeGreaterThan(40);
+  });
+
   test("desligado, a tela diz o que CONTINUA acontecendo — não só o que para", async () => {
     await abrirAbaDoOperador();
 

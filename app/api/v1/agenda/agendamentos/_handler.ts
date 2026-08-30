@@ -56,6 +56,9 @@ export interface MarcarInput {
   contact_id?: string;
   title?: string;
   notes?: string;
+  /** Destino do push — calendário Google escolhido no agente. */
+  google_calendar_id?: string;
+  google_connection_id?: string;
 }
 
 export interface AlterarInput {
@@ -165,6 +168,8 @@ export async function marcarAgendamentoHandler(
       created_by_kind: autorParaCriacao(ctx.actor),
       created_by_user_id: ctx.actor.type === "user" ? ctx.actor.id : null,
       source: ctx.actor.type === "user" ? "ui" : "mcp",
+      ...(input.google_calendar_id ? { google_calendar_id: input.google_calendar_id } : {}),
+      ...(input.google_connection_id ? { google_connection_id: input.google_connection_id } : {}),
     })
     .select("id, starts_at, ends_at, status, time_zone")
     .single();

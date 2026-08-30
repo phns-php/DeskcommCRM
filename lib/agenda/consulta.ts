@@ -35,6 +35,7 @@
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { lerConfigDaAgendaExterna } from "./config-externa";
 import { horariosLivres, type ExcecaoDeData, type Slot } from "./horarios-livres";
 import { lerJornadaDoBanco } from "./jornada";
 import {
@@ -69,6 +70,11 @@ export interface ParametrosDaConsulta {
   eventTypeSlug?: string | null;
   /** Ausente = o responsável padrão do tipo. */
   ownerUserId?: string | null;
+  /**
+   * Calendário Google deste recorte (`calendar_connection_calendars.external_calendar_id`).
+   * Quando vem, a ocupação externa é SÓ deste calendário — um agente por agenda.
+   */
+  externalCalendarId?: string | null;
   de: Date;
   ate: Date;
   /** INJETADO, como em `horariosLivres`. Relógio lido aqui dentro é o defeito que `janela-do-canal.ts` documenta. */
@@ -205,7 +211,7 @@ export async function horariosLivresDaOrg(
     };
   }
 
-  const [{ data: excecoesRaw, error: erroExc }, { data: agendaRaw, error: erroAg }] =
+  const [{ data: excecoesRaw, error: erroExc }, { data: agendaRaw, error: erroAg }, { data: orgRow }] =
     await Promise.all([
       supabase
         .from("calendar_availability_exceptions")
@@ -221,6 +227,7 @@ export async function horariosLivresDaOrg(
         .eq("owner_user_id", donoId)
         .lt("starts_at", params.ate.toISOString())
         .gt("ends_at", params.de.toISOString()),
+      supabase.from("organizations").select("settings").eq("id", organizationId).maybeSingle(),
     ]);
 
   const erroDeColeta = erroExc ?? erroAg;
@@ -233,25 +240,44 @@ export async function horariosLivresDaOrg(
     };
   }
 
+  // Sem espelho, a ocupação é só CRM: não misturar Google/Outlook/CalDAV
+  // nos slots (a IA e a tela passam por aqui). Ausente = ligado.
+  const espelho = lerConfigDaAgendaExterna(
+    orgRow?.settings as Record<string, unknown> | null,
+  ).external_sync_enabled;
+
   // `calendar_external_events` NÃO tem `user_id`: o dono vem por
   // `connection_id → calendar_connections.user_id`. O join traz de carona a
   // situação da conexão, que decide se o horário sai com aviso de defasagem.
   // A situação das conexões do dono, para distinguir "não tem Google" de "tem
   // Google que nunca foi lido". Sem `.select` de erro: conexão ilegível cai no
   // mesmo lado de "não sei", que é o lado seguro.
-  const { data: conexoesRaw } = await supabase
-    .from("calendar_connections")
-    .select("status, last_sync_at")
-    .eq("organization_id", organizationId)
-    .eq("user_id", donoId);
+  const { data: conexoesRaw } = espelho
+    ? await supabase
+        .from("calendar_connections")
+        .select("status, last_sync_at")
+        .eq("organization_id", organizationId)
+        .eq("user_id", donoId)
+    : { data: [] as Array<{ status: string; last_sync_at: string | null }> };
 
-  const { data: externosRaw, error: erroExt } = await supabase
-    .from("calendar_external_events")
-    .select("starts_at, ends_at, transparency, status, calendar_connections!inner(user_id, status)")
-    .eq("organization_id", organizationId)
-    .eq("calendar_connections.user_id", donoId)
-    .lt("starts_at", params.ate.toISOString())
-    .gt("ends_at", params.de.toISOString());
+  const { data: externosRaw, error: erroExt } = espelho
+    ? await (params.externalCalendarId
+        ? supabase
+            .from("calendar_external_events")
+            .select("starts_at, ends_at, transparency, status, calendar_connections!inner(user_id, status)")
+            .eq("organization_id", organizationId)
+            .eq("calendar_connections.user_id", donoId)
+            .eq("external_calendar_id", params.externalCalendarId)
+            .lt("starts_at", params.ate.toISOString())
+            .gt("ends_at", params.de.toISOString())
+        : supabase
+            .from("calendar_external_events")
+            .select("starts_at, ends_at, transparency, status, calendar_connections!inner(user_id, status)")
+            .eq("organization_id", organizationId)
+            .eq("calendar_connections.user_id", donoId)
+            .lt("starts_at", params.ate.toISOString())
+            .gt("ends_at", params.de.toISOString()))
+    : { data: [], error: null };
   if (erroExt) {
     return {
       ok: false,
@@ -338,6 +364,8 @@ export interface AgendamentoListado {
   donoId: string | null;
   contatoId: string | null;
   contatoNome: string | null;
+  /** De onde nasceu — `ui` | `mcp` | … Espelha `calendar_appointments.source`. */
+  origem: string;
 }
 
 export interface ParametrosDaLista {
@@ -370,6 +398,8 @@ export interface ParametrosDaLista {
   de?: string | null;
   ate?: string | null;
   ownerUserId?: string | null;
+  /** Filtra compromissos já destinados a este calendário Google. */
+  googleCalendarId?: string | null;
   situacao?: SituacaoDoAgendamento | null;
   limite: number;
 }
@@ -392,7 +422,12 @@ export async function listaAgendamentos(
   params: ParametrosDaLista,
 ): Promise<ResultadoDaLista> {
   const temAlvo = Boolean(
-    params.contactId || params.leadId || params.dia || params.ownerUserId || (params.de && params.ate),
+    params.contactId ||
+      params.leadId ||
+      params.dia ||
+      params.ownerUserId ||
+      params.googleCalendarId ||
+      (params.de && params.ate),
   );
   if (!temAlvo) {
     // Sem recorte, isto varreria a agenda inteira da organização. Recusa com ensino,
@@ -434,7 +469,7 @@ export async function listaAgendamentos(
   let q = supabase
     .from("calendar_appointments")
     .select(
-      "id, title, starts_at, ends_at, time_zone, status, owner_user_id, contact_id, contacts(name, display_name)",
+      "id, title, starts_at, ends_at, time_zone, status, owner_user_id, contact_id, source, contacts(name, display_name)",
     )
     .eq("organization_id", organizationId)
     .order("starts_at", { ascending: true })
@@ -443,6 +478,7 @@ export async function listaAgendamentos(
   if (idsPorLead) q = q.in("id", idsPorLead);
   if (params.contactId) q = q.eq("contact_id", params.contactId);
   if (params.ownerUserId) q = q.eq("owner_user_id", params.ownerUserId);
+  if (params.googleCalendarId) q = q.eq("google_calendar_id", params.googleCalendarId);
   if (params.situacao) q = q.eq("status", params.situacao);
   if (params.dia) {
     q = q.gte("starts_at", `${params.dia}T00:00:00Z`).lt("starts_at", `${params.dia}T23:59:59.999Z`);
@@ -498,6 +534,9 @@ export async function listaAgendamentos(
       // dizer "você já tem consulta marcada, Maria". Mesma coluna que a tela do
       // produto lê, mesmo precedente de `name` antes de `display_name`.
       contatoNome: nomeDoContato(l.contacts),
+      // Sem isto o refetch da grade pintava todo compromisso como `ui` — e a
+      // marcação do agente parecia "sumida" ou "manual" conforme o olhar.
+      origem: typeof l.source === "string" && l.source ? String(l.source) : "ui",
     })),
   };
 }

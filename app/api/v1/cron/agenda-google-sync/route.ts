@@ -53,6 +53,7 @@
  */
 
 import { NextResponse, type NextRequest } from "next/server";
+import { lerConfigDaAgendaExterna } from "@/lib/agenda/config-externa";
 import { apenasDeMembrosAtivos } from "@/lib/agenda/google/membros";
 
 import { audit } from "@/lib/audit";
@@ -109,16 +110,32 @@ export async function sincronizarAgendasDoGoogle(
   // Fuso de cada organização envolvida, buscado UMA vez — segundo degrau do
   // fallback do fuso (ver o comentário no `const fuso` abaixo).
   const fusoDaOrg = new Map<string, string>();
+  const espelhoPorOrg = new Map<string, boolean>();
   const orgsDoLote = [...new Set(opcoes.calendarios.map((c) => c.organization_id))];
   if (orgsDoLote.length > 0) {
-    const { data: linhasDeOrg } = await admin.from("organizations").select("id, timezone").in("id", orgsDoLote);
-    for (const o of (linhasDeOrg ?? []) as { id: string; timezone: string | null }[]) {
+    const { data: linhasDeOrg } = await admin
+      .from("organizations")
+      .select("id, timezone, settings")
+      .in("id", orgsDoLote);
+    for (const o of (linhasDeOrg ?? []) as {
+      id: string;
+      timezone: string | null;
+      settings: Record<string, unknown> | null;
+    }[]) {
       const tz = o.timezone?.trim();
       if (tz) fusoDaOrg.set(String(o.id), tz);
+      espelhoPorOrg.set(
+        String(o.id),
+        lerConfigDaAgendaExterna(o.settings).external_sync_enabled,
+      );
     }
   }
 
-  for (const cal of opcoes.calendarios.slice(0, TETO_DE_CALENDARIOS)) {
+  const calendarios = opcoes.calendarios.filter(
+    (c) => espelhoPorOrg.get(c.organization_id) !== false,
+  );
+
+  for (const cal of calendarios.slice(0, TETO_DE_CALENDARIOS)) {
     resumo.calendarios += 1;
 
     if (!cal.access_token_encrypted) {

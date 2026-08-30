@@ -74,5 +74,19 @@ describe('loadPublishedAgentConfigById', () => {
     expect(cfg?.activeKbVersionId).toBe('kb-1');
     expect(cfg?.ragTopK).toBe(7);
     expect(cfg?.ragSimilarityThreshold).toBe(0.8);
+    expect(cfg?.calendarConnectionCalendarId).toBeNull();
+  });
+
+  it('lê o calendário Google gravado em ai_agents.config.agenda', async () => {
+    const id = '11111111-1111-4111-8111-111111111111';
+    const cfg = await loadPublishedAgentConfigById(
+      poolWith({
+        ...baseRow,
+        config: { agenda: { calendar_connection_calendar_id: id } },
+      }),
+      'org1',
+      'a1',
+    );
+    expect(cfg?.calendarConnectionCalendarId).toBe(id);
   });
 });

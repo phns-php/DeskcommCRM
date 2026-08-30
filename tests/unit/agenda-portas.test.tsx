@@ -57,25 +57,24 @@ describe("portas da Agenda", () => {
 });
 
 describe("a tela da Agenda MONTA as portas — componente solto não conta", () => {
-  it("app/app/agenda/_client.tsx importa PortasDaAgenda", () => {
+  it("a tela MONTA o botão Configurar Agenda Externa (modal com abas)", () => {
     const fonte = readFileSync(join(process.cwd(), "app", "app", "agenda", "_client.tsx"), "utf8");
     expect(
-      fonte.includes("PortasDaAgenda"),
-      "as portas existem e ninguém as monta: é o mesmo defeito do FiltroDePessoas, que ficou provado na vitrine e invisível no produto",
+      fonte.includes("PainelDasConexoesDaAgenda"),
+      "o painel existe e ninguém o monta: Google/Outlook/CalDAV somem da Agenda",
     ).toBe(true);
-    expect(fonte.includes("<PortasDaAgenda"), "importou e não renderizou").toBe(true);
-  });
+    expect(fonte.includes("<PainelDasConexoesDaAgenda"), "importou e não renderizou").toBe(true);
 
-  it("a tela MONTA o cartão CalDAV — componente solto não conta", () => {
-    const fonte = readFileSync(join(process.cwd(), "app", "app", "agenda", "_client.tsx"), "utf8");
-    expect(fonte.includes("CartaoDaConexaoCalDav"), "o cartão existe e ninguém o monta").toBe(true);
-    expect(fonte.includes("<CartaoDaConexaoCalDav"), "importou e não renderizou").toBe(true);
-  });
-
-  it("a tela MONTA o cartão do Outlook — componente solto não conta", () => {
-    const fonte = readFileSync(join(process.cwd(), "app", "app", "agenda", "_client.tsx"), "utf8");
-    expect(fonte.includes("CartaoDaConexaoMicrosoft"), "o cartão existe e ninguém o monta").toBe(true);
-    expect(fonte.includes("<CartaoDaConexaoMicrosoft"), "importou e não renderizou").toBe(true);
+    const painel = readFileSync(
+      join(process.cwd(), "app", "app", "agenda", "_components", "PainelDasConexoesDaAgenda.tsx"),
+      "utf8",
+    );
+    expect(painel.includes("botao-configurar-agenda-externa"), "sem botão do modal").toBe(true);
+    expect(painel.includes("<CartaoDaConexaoCalDav"), "painel sem CalDAV").toBe(true);
+    expect(painel.includes("<CartaoDaConexaoMicrosoft"), "painel sem Outlook").toBe(true);
+    expect(painel.includes("<CartaoDaConexaoGoogle"), "painel sem Google").toBe(true);
+    expect(painel.includes("porta-tipos"), "painel sem porta de tipos").toBe(true);
+    expect(painel.includes("PORTA_TIPOS"), "painel sem constante PORTA_TIPOS").toBe(true);
   });
 
   it("o vazio da Agenda aponta para as mesmas portas, não para onClick vazio", () => {
