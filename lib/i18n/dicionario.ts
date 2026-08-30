@@ -2211,6 +2211,13 @@ export const DICIONARIO: Traducoes = {
   "Ocupa horário entra na disponibilidade. Recebe do CRM é para onde vão as marcações daqui.": {
     es: "Ocupa horario entra en la disponibilidad. Recibe del CRM es a dónde van las citas de aquí.",
   },
+  "Atualizar e sincronizar": { es: "Actualizar y sincronizar" },
+  "Só atualizar lista": { es: "Solo actualizar lista" },
+  "Chave da conexão": { es: "Clave de la conexión" },
+  "ID do calendário no Google": { es: "ID del calendario en Google" },
+  "O Google recusou estas marcações — repetir o cron não muda o resultado até o destino estar certo.": {
+    es: "Google rechazó estas citas — repetir el cron no cambia el resultado hasta que el destino esté correcto.",
+  },
   "Nenhum calendário listado. Clique em atualizar ou reconecte o Google.": {
     es: "Ningún calendario listado. Actualiza la lista o vuelve a conectar Google.",
   },

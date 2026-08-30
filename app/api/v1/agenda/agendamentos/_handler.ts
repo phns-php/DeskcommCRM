@@ -22,6 +22,7 @@
  * para o modelo, e nenhum dos dois reimplementa a decisão.
  */
 import { horariosLivresDaOrg } from "@/lib/agenda/consulta";
+import { destinoGoogleAoMarcar } from "@/lib/agenda/google/id-do-calendario";
 import {
   atividadeDaTransicao,
   autorParaTimeline,
@@ -148,6 +149,15 @@ export async function marcarAgendamentoHandler(
     fim,
   });
 
+  // A Agenda do CRM é a principal: esta linha NASCE aqui. Os ids do Google
+  // só entram se forem o calendarId da API — nunca o UUID da nossa tabela.
+  const destino = await destinoGoogleAoMarcar(supabase, {
+    organizationId: ctx.organization_id,
+    ownerUserId: donoId,
+    googleCalendarId: input.google_calendar_id,
+    googleConnectionId: input.google_connection_id,
+  });
+
   const { data: criado, error: erroInsert } = await supabase
     .from("calendar_appointments")
     .insert({
@@ -168,8 +178,12 @@ export async function marcarAgendamentoHandler(
       created_by_kind: autorParaCriacao(ctx.actor),
       created_by_user_id: ctx.actor.type === "user" ? ctx.actor.id : null,
       source: ctx.actor.type === "user" ? "ui" : "mcp",
-      ...(input.google_calendar_id ? { google_calendar_id: input.google_calendar_id } : {}),
-      ...(input.google_connection_id ? { google_connection_id: input.google_connection_id } : {}),
+      ...(destino
+        ? {
+            google_calendar_id: destino.externalCalendarId,
+            google_connection_id: destino.connectionId,
+          }
+        : {}),
     })
     .select("id, starts_at, ends_at, status, time_zone")
     .single();

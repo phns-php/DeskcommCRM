@@ -138,6 +138,7 @@ beforeEach(() => {
           });
         return cadeia;
       },
+      insert: async () => ({ error: null }),
       update: (patch: Record<string, unknown>) => {
         const cadeia = {
           eq: (_c: string, id: string) => {
@@ -169,6 +170,29 @@ describe("worker da ida do Google", () => {
     );
     expect(r.data.publicados).toBe(1);
     expect(gravado[linha().id as string]?.google_event_id).toBe("deskcommabc");
+  });
+
+  it("UUID interno em google_calendar_id NÃO vai para o Google — resolve o id externo", async () => {
+    // O 400 `Invalid resource id value` é isto: o worker mandava o uuid de
+    // `calendar_connection_calendars` como calendarId. O Google recusa e o cron
+    // repetia para sempre.
+    pendentes = [
+      linha({ google_calendar_id: "bbbbbbbb-0000-4000-8000-00000000000b" }),
+    ];
+    calendariosDestino = [{ external_calendar_id: "trabalho@grupo.calendar.google.com" }];
+    await rodar();
+    expect(publicarNoGoogle).toHaveBeenCalledWith(
+      "tok-decifrado",
+      "trabalho@grupo.calendar.google.com",
+      expect.any(Object),
+      null,
+    );
+    expect(publicarNoGoogle).not.toHaveBeenCalledWith(
+      expect.anything(),
+      "bbbbbbbb-0000-4000-8000-00000000000b",
+      expect.anything(),
+      expect.anything(),
+    );
   });
 
   it("usa o calendário com is_destination, não só o e-mail da conta", async () => {
