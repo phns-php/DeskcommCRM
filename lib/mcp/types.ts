@@ -11,6 +11,12 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Actor } from "@/lib/api/handlers/types";
 import type { Role } from "@/lib/auth/types";
 
+export interface AgendaDoAgenteNoContexto {
+  ownerUserId: string;
+  externalCalendarId: string;
+  connectionId: string;
+}
+
 export interface McpContext {
   organizationId: string;
   role: Role;
@@ -19,6 +25,11 @@ export interface McpContext {
   requestId: string;
   /** Service-role admin client. Tools devem filtrar `organization_id` em toda query. */
   supabase: SupabaseClient;
+  /**
+   * Calendário Google ligado a ESTE agente (tela de edição).
+   * Ausente = comportamento antigo (dono do tipo / o que o modelo mandar).
+   */
+  agendaDoAgente?: AgendaDoAgenteNoContexto | null;
 }
 
 export type McpToolCategory = "read" | "write" | "handoff";

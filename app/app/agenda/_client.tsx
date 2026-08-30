@@ -78,6 +78,7 @@ export function AgendaClient({
   faltaNoMicrosoft,
   linkDeConfiguracaoDoGoogle,
   linkDeConfiguracaoDoMicrosoft,
+  sincronizacaoExternaInicial = true,
   tiposIniciais,
   agendamentosIniciais,
 }: {
@@ -94,6 +95,8 @@ export function AgendaClient({
   /** Preenchido só para quem administra a instalação — ver `page.tsx`. */
   linkDeConfiguracaoDoGoogle?: string;
   linkDeConfiguracaoDoMicrosoft?: string;
+  /** Espelhar Google/Outlook/CalDAV — `organizations.settings.agenda`. */
+  sincronizacaoExternaInicial?: boolean;
   /** Tipos ativos, resolvidos no servidor: não há rota que os liste ainda. */
   tiposIniciais: Array<{
     id: string;
@@ -269,20 +272,6 @@ export function AgendaClient({
         <AvisoDaConexaoGoogle />
       </React.Suspense>
 
-      <PainelDasConexoesDaAgenda
-        googleConfigurado={googleConfigurado}
-        microsoftConfigurado={microsoftConfigurado}
-        contaConectada={contaConectada}
-        contaOutlook={contaOutlook}
-        contaCalDav={contaCalDav}
-        enderecoDeRetorno={enderecoDeRetorno}
-        enderecoDeRetornoMicrosoft={enderecoDeRetornoMicrosoft}
-        faltaNoGoogle={faltaNoGoogle}
-        faltaNoMicrosoft={faltaNoMicrosoft}
-        linkDeConfiguracaoDoGoogle={linkDeConfiguracaoDoGoogle}
-        linkDeConfiguracaoDoMicrosoft={linkDeConfiguracaoDoMicrosoft}
-      />
-
       <AvisoDeCompromissoForaDaJanela
         recorte={recorteDaGrade}
         onIrPara={(instante) => setAncora(startOfDay(new Date(instante)))}
@@ -295,7 +284,21 @@ export function AgendaClient({
             {t("O que está marcado, com quem, e quem atende — seu e da equipe.")}
           </p>
         </div>
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+          <PainelDasConexoesDaAgenda
+            googleConfigurado={googleConfigurado}
+            microsoftConfigurado={microsoftConfigurado}
+            contaConectada={contaConectada}
+            contaOutlook={contaOutlook}
+            contaCalDav={contaCalDav}
+            enderecoDeRetorno={enderecoDeRetorno}
+            enderecoDeRetornoMicrosoft={enderecoDeRetornoMicrosoft}
+            faltaNoGoogle={faltaNoGoogle}
+            faltaNoMicrosoft={faltaNoMicrosoft}
+            linkDeConfiguracaoDoGoogle={linkDeConfiguracaoDoGoogle}
+            linkDeConfiguracaoDoMicrosoft={linkDeConfiguracaoDoMicrosoft}
+            sincronizacaoExternaInicial={sincronizacaoExternaInicial}
+          />
           <Button variant="outline" size="sm" onClick={() => setAncora(new Date())}>
             {t("Hoje")}
           </Button>

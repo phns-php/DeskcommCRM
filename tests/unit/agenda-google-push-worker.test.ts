@@ -65,6 +65,8 @@ let conexoes: Array<Record<string, unknown>> = [];
 let calendariosDestino: Array<Record<string, unknown>> = [
   { external_calendar_id: "ana@clinica.com.br" },
 ];
+/** Knob da org — desligado = só CRM, o worker não empurra. */
+let espelhoLigado = true;
 
 function linha(over: Record<string, unknown> = {}): Record<string, unknown> {
   return {
@@ -98,6 +100,7 @@ beforeEach(() => {
     { id: "conn-1", status: "healthy", oauth_access_token_encrypted: "\\xCIFRADO", account_email: "ana@clinica.com.br" },
   ];
   calendariosDestino = [{ external_calendar_id: "ana@clinica.com.br" }];
+  espelhoLigado = true;
   vi.mocked(decryptWebhookSecret).mockResolvedValue("tok-decifrado");
   vi.mocked(apenasDeMembrosAtivos).mockImplementation(async (_a, l) => [...l] as never);
   vi.mocked(publicarNoGoogle).mockResolvedValue({ ok: true, eventoId: "deskcommabc", sequence: 1 });
@@ -112,11 +115,13 @@ beforeEach(() => {
         }
         cadeia.maybeSingle = async () => ({
           data:
-            tabela === "calendar_connection_calendars"
-              ? (calendariosDestino[0] ?? null)
-              : tabela === "calendar_connections"
-                ? (conexoes[0] ?? null)
-                : null,
+            tabela === "organizations"
+              ? { settings: { agenda: { external_sync_enabled: espelhoLigado } } }
+              : tabela === "calendar_connection_calendars"
+                ? (calendariosDestino[0] ?? null)
+                : tabela === "calendar_connections"
+                  ? (conexoes[0] ?? null)
+                  : null,
           error: null,
         });
         cadeia.then = (r: (v: unknown) => unknown) =>
@@ -126,7 +131,9 @@ beforeEach(() => {
                 ? pendentes
                 : tabela === "calendar_connection_calendars"
                   ? calendariosDestino
-                  : conexoes,
+                  : tabela === "organizations"
+                    ? [{ settings: { agenda: { external_sync_enabled: espelhoLigado } } }]
+                    : conexoes,
             error: null,
           });
         return cadeia;
@@ -220,6 +227,17 @@ describe("worker da ida do Google", () => {
     expect(
       gravado[linha().id as string]?.google_synced_at,
       "marcou como sincronizado depois de FALHAR",
+    ).toBeUndefined();
+  });
+
+  it("espelho desligado não empurra e não marca google_synced_at", async () => {
+    espelhoLigado = false;
+    const r = await rodar();
+    expect(publicarNoGoogle).not.toHaveBeenCalled();
+    expect(r.data.syncDesligado).toBe(1);
+    expect(
+      gravado[linha().id as string],
+      "marcou a linha — religar o espelho depois nunca empurraria este compromisso",
     ).toBeUndefined();
   });
 

@@ -16,6 +16,7 @@ import { coberturaDoFunil, type EtapaDoMapa } from "@/lib/leads/agent-mapping";
 import type { CoberturaPorFunil } from "./_components/FunisDoAgente";
 import { lerAmbiente } from "@/lib/instalacao/ambiente";
 import { escolherVersoesDaTela } from "@/lib/ai/agents/versoes-da-tela";
+import { contextoDaAgendaParaOAgente } from "@/lib/agenda/agenda-do-agente";
 
 export const dynamic = "force-dynamic";
 
@@ -80,7 +81,7 @@ export default async function AgentEditorPage({
   }
 
   // mcp_agent: busca versions + lookups.
-  const [versionsRes, credentialsRes, channelSessions, routerMemberRes, funisRes, acervoRes] =
+  const [versionsRes, credentialsRes, channelSessions, routerMemberRes, funisRes, acervoRes, agendaCtx] =
     await Promise.all([
     supabase
       .from("ai_agent_versions")
@@ -118,6 +119,7 @@ export default async function AgentEditorPage({
       .eq("organization_id", activeOrg.orgId)
       .eq("is_active", true)
       .order("created_at", { ascending: true }),
+    contextoDaAgendaParaOAgente(supabase, activeOrg.orgId),
   ]);
 
   const versions = (versionsRes.data ?? []) as unknown as AgentVersionRow[];
@@ -172,6 +174,8 @@ export default async function AgentEditorPage({
         materiais={materiais}
         routerMembership={routerMembership}
         readOnly={readOnly}
+        calendariosGoogle={agendaCtx.calendarios}
+        sincronizacaoExterna={agendaCtx.sincronizacaoExterna}
       />
     </div>
   );

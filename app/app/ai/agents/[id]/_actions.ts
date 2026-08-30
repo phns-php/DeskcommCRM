@@ -32,6 +32,10 @@ import {
 } from "@/lib/ai/agents/validation";
 import { publishAgentVersion } from "@/lib/ai/agents/publish";
 import { VALID_TOOL_IDS } from "@/lib/mcp/tools";
+import {
+  mesclarAgendaDoAgente,
+  validarCalendarioGoogleDaOrg,
+} from "@/lib/agenda/agenda-do-agente";
 
 const UUID_RX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -592,6 +596,23 @@ export async function createMcpAgentAction(
     return { ok: false, error: "internal_error", message: versionErr.message };
   }
 
+  if (parsed.data.calendar_connection_calendar_id) {
+    const gravou = await gravarAgendaDoAgente(
+      admin,
+      activeOrg.orgId,
+      agentRow.id,
+      parsed.data.calendar_connection_calendar_id,
+    );
+    if (!gravou.ok) {
+      await admin
+        .from("ai_agents")
+        .update({ archived_at: new Date().toISOString() })
+        .eq("id", agentRow.id)
+        .eq("organization_id", activeOrg.orgId);
+      return gravou;
+    }
+  }
+
   void audit({
     action: "ai_agent.created",
     actorUserId: authUser.id,
@@ -604,4 +625,84 @@ export async function createMcpAgentAction(
 
   revalidatePath("/app/ai/agents");
   return { ok: true, data: { agent_id: agentRow.id } };
+}
+
+async function gravarAgendaDoAgente(
+  admin: ReturnType<typeof createAdminClient>,
+  orgId: string,
+  agentId: string,
+  calendarId: string | null,
+): Promise<ActionResult> {
+  if (calendarId) {
+    const okCal = await validarCalendarioGoogleDaOrg(admin, orgId, calendarId);
+    if (!okCal) {
+      return {
+        ok: false,
+        error: "validation_failed",
+        message: "Calendário Google inválido ou desconectado.",
+      };
+    }
+  }
+  const { data: row, error: readErr } = await admin
+    .from("ai_agents")
+    .select("config")
+    .eq("id", agentId)
+    .eq("organization_id", orgId)
+    .maybeSingle();
+  if (readErr || !row) return { ok: false, error: "internal_error", message: readErr?.message };
+  const next = mesclarAgendaDoAgente(row.config as Record<string, unknown> | null, {
+    calendar_connection_calendar_id: calendarId,
+  });
+  const { error } = await admin
+    .from("ai_agents")
+    .update({ config: next })
+    .eq("id", agentId)
+    .eq("organization_id", orgId);
+  if (error) return { ok: false, error: "internal_error", message: error.message };
+  return { ok: true };
+}
+
+export async function saveAgendaDoAgenteAction(
+  agentId: string,
+  calendarConnectionCalendarId: string | null,
+): Promise<ActionResult> {
+  if (!UUID_RX.test(agentId)) return { ok: false, error: "invalid_request" };
+  if (calendarConnectionCalendarId && !UUID_RX.test(calendarConnectionCalendarId)) {
+    return { ok: false, error: "invalid_request" };
+  }
+  const guard = await ensureAdmin();
+  if (!guard.ok) return guard;
+  const { authUser, activeOrg } = guard;
+  const admin = createAdminClient();
+
+  const { data: agent } = await admin
+    .from("ai_agents")
+    .select("id, archived_at")
+    .eq("id", agentId)
+    .eq("organization_id", activeOrg.orgId)
+    .maybeSingle();
+  if (!agent) return { ok: false, error: "not_found" };
+  if (agent.archived_at) return { ok: false, error: "agent_archived" };
+
+  const gravou = await gravarAgendaDoAgente(
+    admin,
+    activeOrg.orgId,
+    agentId,
+    calendarConnectionCalendarId,
+  );
+  if (!gravou.ok) return gravou;
+
+  void audit({
+    action: "ai_agent.updated",
+    actorUserId: authUser.id,
+    organizationId: activeOrg.orgId,
+    resourceType: "ai_agent",
+    resourceId: agentId,
+    metadata: {
+      calendar_connection_calendar_id: calendarConnectionCalendarId,
+    },
+  });
+
+  revalidatePath(`/app/ai/agents/${agentId}`);
+  return { ok: true };
 }

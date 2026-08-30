@@ -75,6 +75,7 @@ const MARIA: AgendamentoListado = {
   donoId: "u-ana",
   contatoId: "c-maria",
   contatoNome: "Maria Ferraz",
+  origem: "ui",
 };
 
 /** O corpo EXATO do wire: `ok()` é o mesmo wrapper que a rota chama no `return`. */

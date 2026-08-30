@@ -173,6 +173,28 @@ describe("crm_find_free_slots", () => {
     expect(r.horarios).toHaveLength(1);
     expect(r.horarios[0]!.inicio).toBe("2026-09-01T14:00:00.000Z");
   });
+
+  it("o binding do agente vence o owner que o modelo inventar", async () => {
+    respondeCom(SUCESSO);
+    const comBinding: McpContext = {
+      ...ctx,
+      agendaDoAgente: {
+        ownerUserId: "11111111-1111-4111-8111-111111111111",
+        externalCalendarId: "ana@exemplo.com",
+        connectionId: "conn-1",
+      },
+    };
+    await crmFindFreeSlots.handler(
+      {
+        event_type_slug: "consulta",
+        owner_user_id: "22222222-2222-4222-8222-222222222222",
+      },
+      comBinding,
+    );
+    const params = vi.mocked(horariosLivresDaOrg).mock.calls[0]![2];
+    expect(params.ownerUserId).toBe("11111111-1111-4111-8111-111111111111");
+    expect(params.externalCalendarId).toBe("ana@exemplo.com");
+  });
 });
 
 
@@ -213,6 +235,22 @@ describe("crm_list_appointments", () => {
     )) as { compromissos: unknown[]; motivo?: string };
     expect(r.compromissos).toEqual([]);
     expect(r.motivo).toBeUndefined();
+  });
+
+  it("o binding do agente recorta a lista pelo calendário dele", async () => {
+    vi.mocked(listaAgendamentos).mockResolvedValue({ ok: true, agendamentos: [] });
+    const comBinding: McpContext = {
+      ...ctx,
+      agendaDoAgente: {
+        ownerUserId: "11111111-1111-4111-8111-111111111111",
+        externalCalendarId: "ana@exemplo.com",
+        connectionId: "conn-1",
+      },
+    };
+    await crmListAppointments.handler({}, comBinding);
+    const params = vi.mocked(listaAgendamentos).mock.calls[0]![2];
+    expect(params.ownerUserId).toBe("11111111-1111-4111-8111-111111111111");
+    expect(params.googleCalendarId).toBe("ana@exemplo.com");
   });
 
   it("o recorte chega inteiro à regra, e o limite tem padrão", async () => {
@@ -327,5 +365,31 @@ describe("as escritas de agenda", () => {
       ctx,
     );
     expect(vi.mocked(handlers.cancelarAgendamentoHandler).mock.calls[0]![1].organization_id).toBe("org-1");
+  });
+
+  it("marcar grava o calendário Google do agente, não o que o modelo pediu", async () => {
+    vi.mocked(idDoTipoPorSlug).mockResolvedValue({ id: "t-1", nome: "Consulta" });
+    vi.mocked(handlers.marcarAgendamentoHandler).mockResolvedValue({ id: "a-1" });
+    const comBinding: McpContext = {
+      ...ctx,
+      agendaDoAgente: {
+        ownerUserId: "11111111-1111-4111-8111-111111111111",
+        externalCalendarId: "ana@exemplo.com",
+        connectionId: "conn-1",
+      },
+    };
+    await crmBookAppointment.handler(
+      {
+        event_type_slug: "consulta",
+        starts_at: "2026-09-01T14:00:00Z",
+        contact_id: "33333333-3333-4333-8333-333333333333",
+        owner_user_id: "22222222-2222-4222-8222-222222222222",
+      },
+      comBinding,
+    );
+    const input = vi.mocked(handlers.marcarAgendamentoHandler).mock.calls[0]![2];
+    expect(input.owner_user_id).toBe("11111111-1111-4111-8111-111111111111");
+    expect(input.google_calendar_id).toBe("ana@exemplo.com");
+    expect(input.google_connection_id).toBe("conn-1");
   });
 });

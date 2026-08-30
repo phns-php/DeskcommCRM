@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { CredentialRow } from "@/hooks/ai/useCredentials";
 
 import { lerAmbiente } from "@/lib/instalacao/ambiente";
+import { contextoDaAgendaParaOAgente } from "@/lib/agenda/agenda-do-agente";
 
 import { AgentForm } from "../[id]/_components/AgentForm";
 
@@ -39,12 +40,13 @@ export default async function NewAgentPage() {
   }
 
   const supabase = await createClient();
-  const [credentialsRes, channelSessions] = await Promise.all([
+  const [credentialsRes, channelSessions, agendaCtx] = await Promise.all([
     supabase
       .from("ai_provider_credentials_safe")
       .select(CREDENTIAL_COLUMNS)
       .eq("organization_id", activeOrg.orgId),
     listSelectableChannels(supabase, activeOrg.orgId),
+    contextoDaAgendaParaOAgente(supabase, activeOrg.orgId),
   ]);
 
   const credentials = (credentialsRes.data ?? []) as unknown as CredentialRow[];
@@ -56,6 +58,8 @@ export default async function NewAgentPage() {
         credentials={credentials}
         provedoresDaInstalacao={provedoresDaInstalacao()}
         channelSessions={channelSessions}
+        calendariosGoogle={agendaCtx.calendarios}
+        sincronizacaoExterna={agendaCtx.sincronizacaoExterna}
       />
     </div>
   );

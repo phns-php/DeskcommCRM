@@ -22,6 +22,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { mensagemDoEscopo, validarEscopoDaVersao } from "@/lib/ai/agents/escopo";
 import { agentCreateSchema } from "@/lib/ai/guardrails-schema";
 import { agentMcpCreateSchema } from "@/lib/ai/agents/validation";
+import { mesclarAgendaDoAgente, validarCalendarioGoogleDaOrg } from "@/lib/agenda/agenda-do-agente";
 
 export const dynamic = "force-dynamic";
 
@@ -112,6 +113,19 @@ export async function POST(req: NextRequest): Promise<Response> {
     const input = parsed.data;
     const v = input.version;
 
+    if (input.calendar_connection_calendar_id) {
+      const okCal = await validarCalendarioGoogleDaOrg(
+        admin,
+        activeOrg.orgId,
+        input.calendar_connection_calendar_id,
+      );
+      if (!okCal) {
+        return fail("validation_failed", "Calendário Google inválido ou desconectado.", 422, {
+          requestId,
+        });
+      }
+    }
+
     // Insert agent first (no published_version_id yet).
     const { data: agentRow, error: agentErr } = await admin
       .from("ai_agents")
@@ -126,6 +140,13 @@ export async function POST(req: NextRequest): Promise<Response> {
         kind: "mcp_agent",
         priority: input.priority,
         created_by: authUser.id,
+        ...(input.calendar_connection_calendar_id
+          ? {
+              config: mesclarAgendaDoAgente(null, {
+                calendar_connection_calendar_id: input.calendar_connection_calendar_id,
+              }),
+            }
+          : {}),
       })
       .select(AGENT_COLUMNS)
       .single();

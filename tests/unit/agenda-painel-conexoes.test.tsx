@@ -1,9 +1,9 @@
 /**
- * Barra compacta → Sheet com o cartão só ao clicar.
+ * Um botão → modal com espelho + abas Google / Outlook / CalDAV.
  */
-import { render, screen, cleanup, fireEvent } from "@testing-library/react";
+import { render, screen, cleanup, fireEvent, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { PainelDasConexoesDaAgenda } from "@/app/app/agenda/_components/PainelDasConexoesDaAgenda";
 
@@ -24,7 +24,31 @@ vi.mock("next/link", () => ({
   ),
 }));
 
-afterEach(cleanup);
+beforeEach(() => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url: string, init?: RequestInit) => {
+      if (typeof url === "string" && url.includes("/calendarios")) {
+        return {
+          ok: true,
+          json: async () => ({ data: { calendarios: [] } }),
+        } as Response;
+      }
+      if (typeof url === "string" && url.includes("/config-externa") && init?.method === "PATCH") {
+        return {
+          ok: true,
+          json: async () => ({ data: { external_sync_enabled: true } }),
+        } as Response;
+      }
+      return { ok: true, json: async () => ({}) } as Response;
+    }),
+  );
+});
+
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
 
 const propsBase = {
   googleConfigurado: true,
@@ -34,35 +58,56 @@ const propsBase = {
   contaCalDav: null as string | null,
   faltaNoGoogle: [] as string[],
   faltaNoMicrosoft: ["MICROSOFT_CLIENT_ID"] as string[],
+  sincronizacaoExternaInicial: true,
 };
 
 describe("painel das conexões da Agenda", () => {
-  it("na carga só mostra os botões — nenhum cartão aberto", () => {
+  it("na carga só mostra o botão — nenhum cartão na página", () => {
     render(<PainelDasConexoesDaAgenda {...propsBase} />);
     expect(screen.getByTestId("painel-conexoes-agenda")).toBeTruthy();
-    expect(screen.getByTestId("botao-provedor-google")).toBeTruthy();
-    expect(screen.getByTestId("botao-provedor-outlook")).toBeTruthy();
-    expect(screen.getByTestId("botao-provedor-caldav")).toBeTruthy();
-    expect(screen.getByTestId("porta-tipos")).toBeTruthy();
-    expect(screen.getByTestId("porta-horarios")).toBeTruthy();
+    expect(screen.getByTestId("botao-configurar-agenda-externa")).toBeTruthy();
     expect(screen.queryByTestId("cartao-caldav")).toBeNull();
     expect(screen.queryByTestId("cartao-outlook")).toBeNull();
     expect(screen.queryByTestId("conectar-google")).toBeNull();
+    expect(screen.queryByTestId("modal-agenda-externa")).toBeNull();
   });
 
-  it("clicar em CalDAV abre o formulário no Sheet", () => {
+  it("abrir o modal mostra abas e o formulário CalDAV na aba certa", async () => {
     render(<PainelDasConexoesDaAgenda {...propsBase} />);
-    fireEvent.click(screen.getByTestId("botao-provedor-caldav"));
-    expect(screen.getByTestId("cartao-caldav")).toBeTruthy();
-    expect(screen.getByTestId("caldav-home-url")).toBeTruthy();
+    fireEvent.click(screen.getByTestId("botao-configurar-agenda-externa"));
+    expect(screen.getByTestId("modal-agenda-externa")).toBeTruthy();
+    expect(screen.getByTestId("switch-espelho-externo")).toBeTruthy();
+    expect(screen.getByTestId("abas-provedores-externos")).toBeTruthy();
+
+    fireEvent.click(screen.getByTestId("aba-caldav"));
+    await waitFor(() => {
+      expect(screen.getByTestId("cartao-caldav")).toBeTruthy();
+      expect(screen.getByTestId("caldav-home-url")).toBeTruthy();
+    });
   });
 
-  it("com Google conectado, o botão mostra o selo Conectado", () => {
-    render(
-      <PainelDasConexoesDaAgenda {...propsBase} contaConectada="ana@clinica.com.br" />,
+  it("desligar o espelho esconde as abas e mostra aviso só CRM", async () => {
+    render(<PainelDasConexoesDaAgenda {...propsBase} />);
+    fireEvent.click(screen.getByTestId("botao-configurar-agenda-externa"));
+
+    const switchEl = screen.getByTestId("switch-espelho-externo").querySelector("button");
+    expect(switchEl).toBeTruthy();
+    fireEvent.click(switchEl!);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("aviso-so-crm")).toBeTruthy();
+      expect(screen.queryByTestId("abas-provedores-externos")).toBeNull();
+    });
+  });
+
+  it("portas de tipos e horários ficam dentro do modal", () => {
+    render(<PainelDasConexoesDaAgenda {...propsBase} />);
+    fireEvent.click(screen.getByTestId("botao-configurar-agenda-externa"));
+    expect(screen.getByTestId("porta-tipos").getAttribute("href")).toBe(
+      "/app/settings/tenant/agenda",
     );
-    const botao = screen.getByTestId("botao-provedor-google");
-    expect(botao.textContent).toMatch(/Conectado/i);
-    expect(botao.getAttribute("title")).toContain("ana@clinica.com.br");
+    expect(screen.getByTestId("porta-horarios").getAttribute("href")).toBe(
+      "/app/team?aba=atendimento",
+    );
   });
 });

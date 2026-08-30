@@ -14,6 +14,7 @@ import { RunsTable } from "./RunsTable";
 import { UsoDasCapacidades } from "./UsoDasCapacidades";
 import { VersionHistory } from "./VersionHistory";
 import { ProposalsPanel } from "./ProposalsPanel";
+import type { CalendarioGoogleDaOrg } from "@/lib/agenda/agenda-do-agente";
 import type { AgentRow } from "@/hooks/ai/useAgent";
 import type { AgentVersionRow } from "@/hooks/ai/useAgentVersions";
 import type { CredentialRow } from "@/hooks/ai/useCredentials";
@@ -38,6 +39,8 @@ interface Props {
   channelSessions: ChannelSessionLite[];
   routerMembership?: { routerId: string; routerName: string } | null;
   readOnly?: boolean;
+  calendariosGoogle?: CalendarioGoogleDaOrg[];
+  sincronizacaoExterna?: boolean;
 }
 
 export function AgentTabs(props: Props) {
@@ -80,6 +83,8 @@ export function AgentTabs(props: Props) {
           materiais={props.materiais}
           routerMembership={props.routerMembership}
           readOnly={props.readOnly}
+          calendariosGoogle={props.calendariosGoogle}
+          sincronizacaoExterna={props.sincronizacaoExterna}
         />
       </TabsContent>
 

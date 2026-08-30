@@ -54,11 +54,13 @@ test.describe("a Agenda como o dono do produto a usa", () => {
     await expect(page.getByRole("heading", { name: "Agenda", exact: true })).toBeVisible();
   });
 
-  test("da Agenda dá para IR aos tipos e à jornada — não só ler que faltam", async () => {
+  test("da Agenda dá para IR aos tipos e à jornada — pelo modal de agenda externa", async () => {
     // Tipos e horários já tinham tela. Quem abria a Agenda numa instalação nova
     // lia o aviso e não tinha porta. Ter tela ≠ ser alcançável a partir daqui.
     await page.goto("/app/agenda");
     await expect(page.getByTestId("tela-agenda")).toBeVisible({ timeout: ESPERA });
+    await page.getByTestId("botao-configurar-agenda-externa").click();
+    await expect(page.getByTestId("modal-agenda-externa")).toBeVisible();
 
     const tipos = page.getByTestId("porta-tipos");
     const horarios = page.getByTestId("porta-horarios");
@@ -71,11 +73,13 @@ test.describe("a Agenda como o dono do produto a usa", () => {
     await expect(page).toHaveURL(/\/app\/settings\/tenant\/agenda/, { timeout: ESPERA });
   });
 
-  test("da Agenda dá para conectar CalDAV — botão abre o Sheet com o formulário", async () => {
+  test("da Agenda dá para conectar CalDAV — modal › aba CalDAV com o formulário", async () => {
     await page.goto("/app/agenda");
     await expect(page.getByTestId("tela-agenda")).toBeVisible({ timeout: ESPERA });
-    await expect(page.getByTestId("painel-conexoes-agenda")).toBeVisible();
-    await page.getByTestId("botao-provedor-caldav").click();
+    await expect(page.getByTestId("botao-configurar-agenda-externa")).toBeVisible();
+    await page.getByTestId("botao-configurar-agenda-externa").click();
+    await expect(page.getByTestId("modal-agenda-externa")).toBeVisible();
+    await page.getByTestId("aba-caldav").click();
     await expect(page.getByTestId("detalhe-provedor-caldav")).toBeVisible();
     await expect(page.getByTestId("cartao-caldav")).toBeVisible();
     await expect(page.getByTestId("caldav-home-url")).toBeVisible();
@@ -84,11 +88,12 @@ test.describe("a Agenda como o dono do produto a usa", () => {
     await expect(page.getByTestId("conectar-caldav")).toBeVisible();
   });
 
-  test("da Agenda dá para ver o cartão do Outlook — botão abre o Sheet, não é 'em breve'", async () => {
+  test("da Agenda dá para ver o Outlook — modal › aba Outlook, não é 'em breve'", async () => {
     await page.goto("/app/agenda");
     await expect(page.getByTestId("tela-agenda")).toBeVisible({ timeout: ESPERA });
-    await expect(page.getByTestId("botao-provedor-outlook")).toBeVisible();
-    await page.getByTestId("botao-provedor-outlook").click();
+    await page.getByTestId("botao-configurar-agenda-externa").click();
+    await expect(page.getByTestId("modal-agenda-externa")).toBeVisible();
+    await page.getByTestId("aba-outlook").click();
     await expect(page.getByTestId("detalhe-provedor-outlook")).toBeVisible();
     await expect(page.getByTestId("cartao-outlook")).toBeVisible();
   });

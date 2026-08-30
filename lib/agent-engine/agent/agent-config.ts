@@ -15,6 +15,8 @@
  */
 import type pg from 'pg';
 
+import { lerAgendaDoAgente } from '@/lib/agenda/agenda-do-agente';
+
 import { lerJanelaDeAtendimento, type JanelaDeAtendimento } from './janela-de-atendimento';
 
 export interface PublishedAgentConfig {
@@ -85,6 +87,11 @@ export interface PublishedAgentConfig {
   /** criadores (p/ mint do token efêmero de audit — padrão do runtime nativo). */
   versionCreatedBy: string | null;
   agentCreatedBy: string | null;
+  /**
+   * Ponteiro gravado em `ai_agents.config.agenda` — o calendário Google deste
+   * agente. O runtime resolve dono+destino em `resolverAgendaDoAgente`.
+   */
+  calendarConnectionCalendarId: string | null;
 }
 
 interface Row {
@@ -201,6 +208,7 @@ function mapAgentConfigRow(r: Row): PublishedAgentConfig {
     janelaDeAtendimento: lerJanelaDeAtendimento(r.trigger_config),
     versionCreatedBy: r.version_created_by,
     agentCreatedBy: r.agent_created_by,
+    calendarConnectionCalendarId: lerAgendaDoAgente(r.config).calendar_connection_calendar_id,
   };
 }
 

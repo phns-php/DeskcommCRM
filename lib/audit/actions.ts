@@ -364,6 +364,7 @@ export const AUDIT_ACTIONS = [
   "agenda.google.conexao_concluida",
   "agenda.google.conexao_desconectada",
   "agenda.google.calendario_configurado",
+  "agenda.external_sync_configurada",
   "agenda.microsoft.conexao_iniciada",
   "agenda.microsoft.conexao_falhou",
   "agenda.microsoft.conexao_concluida",

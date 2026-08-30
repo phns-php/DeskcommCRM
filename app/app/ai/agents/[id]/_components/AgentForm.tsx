@@ -49,11 +49,14 @@ import { PainelDoOperador } from "./PainelDoOperador";
 import { PainelDeSeguranca } from "./PainelDeSeguranca";
 import { BasesDoAgente, type MaterialDoAcervo } from "./BasesDoAgente";
 import { FunisDoAgente, type CoberturaPorFunil } from "./FunisDoAgente";
+import { AgendaDoAgente } from "./AgendaDoAgente";
+import { lerAgendaDoAgente, type CalendarioGoogleDaOrg } from "@/lib/agenda/agenda-do-agente";
 import { PublishConfirmDialog } from "./PublishConfirmDialog";
 import {
   saveAgentDraftAction,
   publishAgentAction,
   createMcpAgentAction,
+  saveAgendaDoAgenteAction,
 } from "../_actions";
 
 import { versionCreateSchema, agentMcpCreateSchema } from "@/lib/ai/agents/validation";
@@ -116,6 +119,8 @@ type Props = (EditProps | CreateProps) & {
   funis?: FunilDaResposta[];
   /** Quanto de cada funil o assistente sabe percorrer (spec 17 passo 4). */
   cobertura?: CoberturaPorFunil;
+  calendariosGoogle?: CalendarioGoogleDaOrg[];
+  sincronizacaoExterna?: boolean;
   /**
    * O acervo da organização, para o assistente escolher o que consulta (0181).
    *
@@ -156,6 +161,7 @@ interface FormState {
   operator_tool_ids: string[];
   pipeline_ids: string[];
   knowledge_source_ids: string[];
+  calendar_connection_calendar_id: string;
 }
 
 interface FollowupValue {
@@ -220,6 +226,8 @@ function buildState(args: {
     pipeline_ids: version?.pipeline_ids ?? [],
     // `?? []` = nenhum material. Mesma direção segura: agir de menos.
     knowledge_source_ids: version?.knowledge_source_ids ?? [],
+    calendar_connection_calendar_id:
+      lerAgendaDoAgente(agent?.config).calendar_connection_calendar_id ?? "",
   };
 }
 
@@ -258,6 +266,8 @@ export function AgentForm(props: Props) {
   const t = useT();
   const funis = props.funis ?? [];
   const materiais = props.materiais ?? [];
+  const calendariosGoogle = props.calendariosGoogle ?? [];
+  const sincronizacaoExterna = props.sincronizacaoExterna ?? true;
   const router = useRouter();
   const isEdit = props.mode === "edit";
   const readOnly = props.readOnly ?? false;
@@ -383,6 +393,14 @@ export function AgentForm(props: Props) {
           toast.error(res.message ?? `${t("Erro")}: ${res.error}`);
           return;
         }
+        const agenda = await saveAgendaDoAgenteAction(
+          props.agent.id,
+          form.calendar_connection_calendar_id || null,
+        );
+        if (!agenda.ok) {
+          toast.error(agenda.message ?? `${t("Erro")}: ${agenda.error}`);
+          return;
+        }
         toast.success(`${t("Rascunho")} v${res.data!.version_number} ${t("salvo.")}`);
         router.refresh();
       } else {
@@ -391,6 +409,7 @@ export function AgentForm(props: Props) {
           description: form.description.trim() === "" ? undefined : form.description,
           priority: form.priority,
           version: toVersionPayload(form),
+          calendar_connection_calendar_id: form.calendar_connection_calendar_id || null,
         };
         const validated = agentMcpCreateSchema.safeParse(payload);
         if (!validated.success) {
@@ -589,6 +608,16 @@ export function AgentForm(props: Props) {
           cobertura={props.cobertura}
           value={form.pipeline_ids}
           onChange={(ids) => patch({ pipeline_ids: ids })}
+          disabled={disabled}
+        />
+      ) : null}
+
+      {papel === "operacao" ? (
+        <AgendaDoAgente
+          calendarios={calendariosGoogle}
+          sincronizacaoExterna={sincronizacaoExterna}
+          value={form.calendar_connection_calendar_id}
+          onChange={(id) => patch({ calendar_connection_calendar_id: id })}
           disabled={disabled}
         />
       ) : null}
