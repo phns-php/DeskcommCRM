@@ -27,7 +27,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { lerConfigDaAgendaExterna } from "@/lib/agenda/config-externa";
-import { calendarioDestinoDaConexao } from "@/lib/agenda/google/calendarios";
+import { resolverIdDoCalendarioGoogle } from "@/lib/agenda/google/id-do-calendario";
 import { apenasDeMembrosAtivos } from "@/lib/agenda/google/membros";
 import { apagarNoGoogle, publicarNoGoogle } from "@/lib/agenda/google/escrita";
 import type { AgendamentoParaGoogle } from "@/lib/agenda/google/evento";
@@ -198,10 +198,14 @@ async function executar(req: NextRequest): Promise<Response> {
     }
 
     const accessToken = await decryptWebhookSecret(admin, conexao.oauth_access_token_encrypted);
-    // Destino do agente (gravado na marcação) vence o `is_destination` da conexão.
-    const calendario =
-      linha.google_calendar_id ??
-      (await calendarioDestinoDaConexao(admin, conexao.id, conexao.account_email));
+    // Destino do agente vence o `is_destination` — MAS só se for id do Google.
+    // UUID interno aqui é o 400 `Invalid resource id value`.
+    const calendario = await resolverIdDoCalendarioGoogle(admin, {
+      organizationId: linha.organization_id,
+      connectionId: conexao.id,
+      candidato: linha.google_calendar_id,
+      fallbackAccountEmail: conexao.account_email,
+    });
     if (!accessToken || !calendario) {
       // Esta saída não deixava rastro NENHUM — nem log, nem coluna. Uma
       // instalação com o token indecifrável somava `falhas` para sempre sem uma

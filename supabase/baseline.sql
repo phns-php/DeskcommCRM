@@ -17059,6 +17059,30 @@ create trigger trg_platform_microsoft_oauth_updated_at
   before update on public.platform_microsoft_oauth
   for each row execute function public.fn_set_updated_at();
 
+-- ---- agenda: id externo não é UUID nosso (migration 0205) ----
+update public.calendar_appointments a
+   set google_calendar_id = c.external_calendar_id
+  from public.calendar_connection_calendars c
+ where a.google_calendar_id ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+   and c.id = a.google_calendar_id::uuid
+   and c.organization_id = a.organization_id
+   and c.external_calendar_id is not null
+   and c.external_calendar_id <> '';
+
+update public.calendar_appointments
+   set google_calendar_id = null
+ where google_calendar_id ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$';
+
+alter table public.calendar_appointments
+  drop constraint if exists calendar_appointments_google_calendar_id_nao_e_uuid;
+
+alter table public.calendar_appointments
+  add constraint calendar_appointments_google_calendar_id_nao_e_uuid
+  check (
+    google_calendar_id is null
+    or google_calendar_id !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+  );
+
 -- ---- VARREDURA anon: função nova nasce exposta em quem ATUALIZA (migration 0116) ----
 --
 -- ⚠️ ESTE BLOCO É, DE PROPÓSITO, O ÚLTIMO DO ARQUIVO. Apêndice novo entra ANTES

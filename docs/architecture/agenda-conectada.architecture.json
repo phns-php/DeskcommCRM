@@ -40,7 +40,10 @@
     { "id": "audit", "lane": "banco", "col": 5, "type": "database", "label": "api_audit_log", "sublabel": "agenda.microsoft.conexao_* · agenda.caldav.conexao_*" },
     { "id": "editarAgente", "lane": "humano", "col": 5, "type": "frontend", "label": "/app/ai/agents/[id] · Operação", "sublabel": "select do calendário Google deste agente" },
     { "id": "configAgente", "lane": "banco", "col": 5, "type": "database", "label": "ai_agents.config.agenda", "sublabel": "calendar_connection_calendar_id" },
-    { "id": "runtimeAgenda", "lane": "adapter", "col": 5, "type": "service", "label": "resolverAgendaDoAgente", "sublabel": "dono + destino nas tools MCP" }
+    { "id": "runtimeAgenda", "lane": "adapter", "col": 5, "type": "service", "label": "resolverAgendaDoAgente", "sublabel": "dono + destino nas tools MCP" },
+    { "id": "idsGoogle", "lane": "humano", "col": 2, "type": "frontend", "label": "IDs no modal Google", "sublabel": "connection_id + calendarId da API" },
+    { "id": "syncAgora", "lane": "borda", "col": 2, "type": "api", "label": "POST /agenda/google/sincronizar", "sublabel": "ida + volta agora · agent+" },
+    { "id": "resolverId", "lane": "adapter", "col": 2, "type": "service", "label": "resolverIdDoCalendarioGoogle", "sublabel": "recusa UUID interno · evita 400" }
   ],
   "edges": [
     { "id": "e0", "from": "tela", "to": "modalExterna", "label": "abre o modal" },
@@ -80,7 +83,11 @@
     { "id": "e34", "from": "editarAgente", "to": "configAgente", "label": "grava o ponteiro" },
     { "id": "e35", "from": "configAgente", "to": "runtimeAgenda", "label": "turno lê o binding" },
     { "id": "e36", "from": "runtimeAgenda", "to": "calendarios", "label": "só se Google saudável" },
-    { "id": "e37", "from": "configExterna", "to": "runtimeAgenda", "label": "espelho off → binding some" }
+    { "id": "e37", "from": "configExterna", "to": "runtimeAgenda", "label": "espelho off → binding some" },
+    { "id": "e38", "from": "cartaoGoogle", "to": "idsGoogle", "label": "mostra chave e calendarId" },
+    { "id": "e39", "from": "idsGoogle", "to": "syncAgora", "label": "Atualizar e sincronizar" },
+    { "id": "e40", "from": "syncAgora", "to": "resolverId", "label": "nunca manda UUID ao Google" },
+    { "id": "e41", "from": "resolverId", "to": "calendarios", "label": "lê external_calendar_id" }
   ],
   "cards": [
     {
