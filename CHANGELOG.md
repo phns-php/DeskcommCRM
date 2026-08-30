@@ -8,6 +8,23 @@ Se você roda o DeskcommCRM numa VPS, **leia a seção da versão para a qual es
 
 ## [Não lançado]
 
+## [1.13.0] — 2026-08-30
+
+### Corrigido
+
+- **Destino do Google no modal e sync na hora — sem o 400 eterno** A Agenda do CRM continua sendo a principal: toda marcação (tela ou agente)
+  nasce em `calendar_appointments`. O Google é espelho.
+
+  O HTTP 400 `Invalid resource id value` vinha de mandar o UUID interno da
+  nossa tabela como se fosse o id do calendário no Google. Agora o destino
+  visível no modal ("Chave da conexão" + "ID do calendário no Google") é o
+  que a API aceita, e o botão **Atualizar e sincronizar** empurra o que
+  falta e puxa a ocupação sem esperar o cron. Falhas ficam listadas no
+  mesmo modal — repetir o cron sozinho não muda o resultado se o id estiver
+  errado.
+
+  Nada a editar no `.env`.
+
 ## [1.12.0] — 2026-08-30
 
 ### Adicionado
@@ -1591,7 +1608,8 @@ Primeira versão marcada do DeskcommCRM. O projeto vinha sendo desenvolvido publ
 
 - **Node 22 é obrigatório para desenvolvimento.** A suíte de invariantes instancia o cliente do Supabase, que exige o `WebSocket` global — nativo apenas a partir do Node 22. Isso não afeta quem apenas hospeda: a VPS roda a imagem pronta.
 
-[Não lançado]: https://github.com/phns-php/DeskcommCRM/compare/v1.12.0...HEAD
+[Não lançado]: https://github.com/phns-php/DeskcommCRM/compare/v1.13.0...HEAD
+[1.13.0]: https://github.com/phns-php/DeskcommCRM/compare/v1.12.0...v1.13.0
 [1.12.0]: https://github.com/phns-php/DeskcommCRM/compare/v1.11.1...v1.12.0
 [1.10.1]: https://github.com/melgarafael/DeskcommCRM/compare/v1.10.0...v1.10.1
 [1.10.0]: https://github.com/melgarafael/DeskcommCRM/compare/v1.9.1...v1.10.0
