@@ -8,6 +8,57 @@ Se você roda o DeskcommCRM numa VPS, **leia a seção da versão para a qual es
 
 ## [Não lançado]
 
+## [1.12.0] — 2026-08-30
+
+### Adicionado
+
+- **Cada agente pode usar uma agenda Google** Na edição do agente, a aba que organiza o sistema ganha um seletor das
+  agendas Google ativas da empresa. Com a conexão externa ligada e o Google
+  conectado, aquele agente marca, consulta, remarca e cancela só na agenda
+  escolhida — um agente por profissional, na mesma organização.
+
+### Alterado
+
+- **Conexões da Agenda viram botões grandes** Na Agenda, Google, Outlook e CalDAV passam a aparecer como três botões. O
+  formulário ou o detalhe de cada um só abre ao clicar — a grade deixa de ficar
+  empurrada para baixo por três cartões empilhados. Quem já conectou uma conta
+  vê o e-mail no botão e o selo Conectado; nada muda no que já estava ligado.
+
+- **Agenda limpa com modal de agenda externa** Na Agenda, Google/Outlook/CalDAV saem do topo da página. Um botão
+  "Configurar Agenda Externa" abre um modal com: ligar/desligar o espelho
+  externo (só CRM vs sincronizar) e abas para cada provedor. Com o espelho
+  desligado, as marcações ficam só no CRM: a grade e os horários livres
+  ignoram ocupação externa, e o push/pull do Google não roda.
+
+- **Agenda limpa, seletor de calendário Google e marcação da IA visível** Quem já roda o sistema não precisa editar arquivo. Na Agenda, Google/Outlook/CalDAV
+  viram botões compactos (o detalhe abre ao clicar). Com o Google conectado, dá para
+  escolher qual calendário ocupa horário e qual recebe as marcações do CRM. A
+  marcação feita pela IA passa a aparecer na grade com selo "IA", e um aviso leva
+  à data quando o compromisso cai fora da semana visível.
+
+  O agente só deve confirmar marcação ao cliente quando a ferramenta devolve
+  `marcado: true`. Push ao Google usa o calendário marcado como destino.
+
+## [1.11.1] — 2026-08-29
+
+### Corrigido
+
+- **Falha ao publicar no Google passa a mostrar o motivo real** Quando o Google recusa um compromisso (HTTP 400), o log da VPS e a coluna de erro passam a trazer a mensagem do Google — antes só aparecia "HTTP 400", sem o porquê.
+
+## [1.11.0] — 2026-08-29
+
+### Adicionado
+
+- **Conectar Outlook e CalDAV pela tela da Agenda** Na Agenda passam a aparecer o cartão do Outlook e o formulário CalDAV, no mesmo contrato do Google: cada pessoa conecta a conta dela.
+
+### Alterado
+
+- **Imagens do app, worker e scheduler saem da conta phns-php** Quem instala a partir deste repositório puxa as três imagens do GHCR `phns-php`.
+
+### Corrigido
+
+- **O instalador deixa de quebrar o SQL do dono com crase** O `install.sh` não interpola mais crase no SQL do bootstrap do administrador.
+
 ## [1.10.1] — 2026-08-28
 
 ### Corrigido
@@ -1540,7 +1591,8 @@ Primeira versão marcada do DeskcommCRM. O projeto vinha sendo desenvolvido publ
 
 - **Node 22 é obrigatório para desenvolvimento.** A suíte de invariantes instancia o cliente do Supabase, que exige o `WebSocket` global — nativo apenas a partir do Node 22. Isso não afeta quem apenas hospeda: a VPS roda a imagem pronta.
 
-[Não lançado]: https://github.com/melgarafael/DeskcommCRM/compare/v1.10.1...HEAD
+[Não lançado]: https://github.com/phns-php/DeskcommCRM/compare/v1.12.0...HEAD
+[1.12.0]: https://github.com/phns-php/DeskcommCRM/compare/v1.11.1...v1.12.0
 [1.10.1]: https://github.com/melgarafael/DeskcommCRM/compare/v1.10.0...v1.10.1
 [1.10.0]: https://github.com/melgarafael/DeskcommCRM/compare/v1.9.1...v1.10.0
 [1.9.1]: https://github.com/melgarafael/DeskcommCRM/compare/v1.9.0...v1.9.1
