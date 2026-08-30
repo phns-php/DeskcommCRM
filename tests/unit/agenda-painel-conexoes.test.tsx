@@ -1,7 +1,8 @@
 /**
  * Um botão → modal com espelho + abas Google / Outlook / CalDAV.
  */
-import { render, screen, cleanup, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, cleanup, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -73,26 +74,28 @@ describe("painel das conexões da Agenda", () => {
   });
 
   it("abrir o modal mostra abas e o formulário CalDAV na aba certa", async () => {
+    const user = userEvent.setup();
     render(<PainelDasConexoesDaAgenda {...propsBase} />);
-    fireEvent.click(screen.getByTestId("botao-configurar-agenda-externa"));
+    await user.click(screen.getByTestId("botao-configurar-agenda-externa"));
     expect(screen.getByTestId("modal-agenda-externa")).toBeTruthy();
     expect(screen.getByTestId("switch-espelho-externo")).toBeTruthy();
     expect(screen.getByTestId("abas-provedores-externos")).toBeTruthy();
 
-    fireEvent.click(screen.getByTestId("aba-caldav"));
-    await waitFor(() => {
-      expect(screen.getByTestId("cartao-caldav")).toBeTruthy();
-      expect(screen.getByTestId("caldav-home-url")).toBeTruthy();
-    });
+    // Radix Tabs só monta a aba ativa — fireEvent no trigger às vezes não
+    // troca o valor no jsdom; userEvent espelha o clique real.
+    await user.click(screen.getByTestId("aba-caldav"));
+    expect(await screen.findByTestId("cartao-caldav")).toBeTruthy();
+    expect(screen.getByTestId("caldav-home-url")).toBeTruthy();
   });
 
   it("desligar o espelho esconde as abas e mostra aviso só CRM", async () => {
+    const user = userEvent.setup();
     render(<PainelDasConexoesDaAgenda {...propsBase} />);
-    fireEvent.click(screen.getByTestId("botao-configurar-agenda-externa"));
+    await user.click(screen.getByTestId("botao-configurar-agenda-externa"));
 
     const switchEl = screen.getByTestId("switch-espelho-externo").querySelector("button");
     expect(switchEl).toBeTruthy();
-    fireEvent.click(switchEl!);
+    await user.click(switchEl!);
 
     await waitFor(() => {
       expect(screen.getByTestId("aviso-so-crm")).toBeTruthy();
@@ -100,9 +103,10 @@ describe("painel das conexões da Agenda", () => {
     });
   });
 
-  it("portas de tipos e horários ficam dentro do modal", () => {
+  it("portas de tipos e horários ficam dentro do modal", async () => {
+    const user = userEvent.setup();
     render(<PainelDasConexoesDaAgenda {...propsBase} />);
-    fireEvent.click(screen.getByTestId("botao-configurar-agenda-externa"));
+    await user.click(screen.getByTestId("botao-configurar-agenda-externa"));
     expect(screen.getByTestId("porta-tipos").getAttribute("href")).toBe(
       "/app/settings/tenant/agenda",
     );

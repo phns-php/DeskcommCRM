@@ -130,48 +130,38 @@ describe("listarCalendariosDaConta", () => {
 });
 
 describe("calendarioDestinoDaConexao", () => {
-  it("prefere is_destination, depois primary, depois o e-mail da conta", async () => {
-    const chamadas: string[] = [];
-    const admin = {
+  /** O código faz `.eq().eq().limit().maybeSingle()` — o mock tem de encadear os dois `eq`. */
+  function adminComDestino(respostaPorFiltro: (filtros: string[]) => { external_calendar_id: string } | null) {
+    return {
       from: () => ({
-        select: () => ({
-          eq: (_c: string, v: unknown) => {
-            chamadas.push(String(v));
-            const cadeia = {
-              eq: () => cadeia,
-              limit: () => cadeia,
-              maybeSingle: async () => {
-                if (chamadas.includes("true") && chamadas.filter((x) => x === "true").length === 1) {
-                  // primeira query: is_destination
-                  return { data: { external_calendar_id: "trabalho@x.com" }, error: null };
-                }
-                return { data: null, error: null };
-              },
-            };
-            return cadeia;
-          },
-        }),
+        select: () => {
+          const filtros: string[] = [];
+          const cadeia = {
+            eq: (coluna: string, valor: unknown) => {
+              filtros.push(`${coluna}=${String(valor)}`);
+              return cadeia;
+            },
+            limit: () => cadeia,
+            maybeSingle: async () => ({ data: respostaPorFiltro(filtros), error: null }),
+          };
+          return cadeia;
+        },
       }),
     };
+  }
+
+  it("prefere is_destination, depois primary, depois o e-mail da conta", async () => {
+    const admin = adminComDestino((filtros) =>
+      filtros.includes("is_destination=true")
+        ? { external_calendar_id: "trabalho@x.com" }
+        : null,
+    );
     const id = await calendarioDestinoDaConexao(admin as never, "conn-1", "ana@clinica.com.br");
     expect(id).toBe("trabalho@x.com");
   });
 
   it("cai no e-mail da conta quando a tabela não tem linha", async () => {
-    const admin = {
-      from: () => ({
-        select: () => ({
-          eq: () => {
-            const cadeia = {
-              eq: () => cadeia,
-              limit: () => cadeia,
-              maybeSingle: async () => ({ data: null, error: null }),
-            };
-            return cadeia;
-          },
-        }),
-      }),
-    };
+    const admin = adminComDestino(() => null);
     const id = await calendarioDestinoDaConexao(admin as never, "conn-1", "ana@clinica.com.br");
     expect(id).toBe("ana@clinica.com.br");
   });
