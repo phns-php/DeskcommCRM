@@ -29,7 +29,10 @@ import {
 import { cn } from "@/lib/utils";
 import { useT } from "@/hooks/i18n/useT";
 
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+
 import { corDaTrilha, fundoDaTrilha } from "./paleta";
+import { ResumoDoAgendamento } from "./ResumoDoAgendamento";
 import type { Agendamento, Pessoa, VisaoDaAgenda } from "./tipos";
 
 /**
@@ -326,7 +329,7 @@ function BlocoDeAgendamento({
   const doGoogle = agendamento.origem === "google_sync";
   const cancelado = agendamento.situacao === "cancelled";
 
-  return (
+  const card = (
     <button
       type="button"
       data-testid={`agendamento-${agendamento.id}`}
@@ -433,6 +436,22 @@ function BlocoDeAgendamento({
         </span>
       )}
     </button>
+  );
+
+  // Toast no hover seria sonner: some em 4s e empilha. O card da grade pede
+  // o resumo ENQUANTO o mouse está em cima — Tooltip, não notificação.
+  if (doGoogle || cancelado || arraste?.ativo) return card;
+  return (
+    <Tooltip delayDuration={400}>
+      <TooltipTrigger asChild>{card}</TooltipTrigger>
+      <TooltipContent
+        side="top"
+        sideOffset={6}
+        className="border border-border bg-surface px-3 py-2 text-text shadow-md"
+      >
+        <ResumoDoAgendamento agendamento={agendamento} compacto />
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -633,11 +652,13 @@ function VisaoDeMes({
   agora,
   agendamentos,
   pessoas,
+  onAbrir,
 }: {
   ancora: Date;
   agora: Date;
   agendamentos: Agendamento[];
   pessoas: Pessoa[];
+  onAbrir?: (id: string) => void;
 }) {
   const t = useT();
   const localeDaData = useLocaleDeData();
@@ -699,13 +720,10 @@ function VisaoDeMes({
               <div className="space-y-0.5">
                 {doDia.slice(0, 2).map((c) => {
                   const trilha = pessoas.find((p) => p.id === c.responsavelId)?.trilha ?? 1;
-                  return (
-                    <div
-                      key={c.id}
-                      data-testid={`chip-mes-${c.id}`}
-                      className="flex items-center gap-1 rounded-sm px-1 py-0.5"
-                      style={{ background: fundoDaTrilha(trilha, 14) }}
-                    >
+                  const doGoogle = c.origem === "google_sync";
+                  const clicavel = Boolean(onAbrir) && !doGoogle;
+                  const miolo = (
+                    <>
                       <span
                         aria-hidden
                         className="h-1.5 w-1.5 shrink-0 rounded-full"
@@ -714,7 +732,38 @@ function VisaoDeMes({
                       <span className="truncate text-[10px] leading-4 text-text">
                         {format(new Date(c.comeca), "HH:mm")} {t(c.titulo)}
                       </span>
+                    </>
+                  );
+                  const chip = clicavel ? (
+                    <button
+                      type="button"
+                      data-testid={`chip-mes-${c.id}`}
+                      onClick={() => onAbrir?.(c.id)}
+                      className="flex w-full items-center gap-1 rounded-sm px-1 py-0.5 text-left"
+                      style={{ background: fundoDaTrilha(trilha, 14) }}
+                    >
+                      {miolo}
+                    </button>
+                  ) : (
+                    <div
+                      data-testid={`chip-mes-${c.id}`}
+                      className="flex items-center gap-1 rounded-sm px-1 py-0.5"
+                      style={{ background: fundoDaTrilha(trilha, 14) }}
+                    >
+                      {miolo}
                     </div>
+                  );
+                  if (doGoogle) return <React.Fragment key={c.id}>{chip}</React.Fragment>;
+                  return (
+                    <Tooltip key={c.id} delayDuration={400}>
+                      <TooltipTrigger asChild>{chip}</TooltipTrigger>
+                      <TooltipContent
+                        side="top"
+                        className="border border-border bg-surface px-3 py-2 text-text shadow-md"
+                      >
+                        <ResumoDoAgendamento agendamento={c} compacto />
+                      </TooltipContent>
+                    </Tooltip>
                   );
                 })}
               </div>
@@ -956,41 +1005,49 @@ export function GradeDaAgenda({
     : undefined;
 
   return (
-    <div
-      data-testid="grade-da-agenda"
-      data-visao={visao}
-      className={cn(
-        "flex min-h-0 flex-col overflow-hidden rounded-lg border border-border bg-surface",
-        className,
-      )}
-    >
-      {visao === "mes" ? (
-        <VisaoDeMes ancora={ancora} agora={agora} agendamentos={agendamentos} pessoas={pessoas} />
-      ) : (
-        // A rolagem mora AQUI dentro, e não na página: `html, body` têm
-        // `overflow-x: hidden` no globals.css, então uma grade que estourasse a
-        // largura simplesmente sumiria pela direita, sem barra para trazê-la de volta.
-        <div ref={gradeRef} className="flex min-h-0 flex-1 overflow-auto">
-          <ColunaDeHoras />
-          <div className="flex min-w-0 flex-1">
-            {dias.map((d) => (
-              <ColunaDeDia
-                key={d.toISOString()}
-                dia={d}
-                agora={agora}
-                agendamentos={agendamentos}
-                pessoas={pessoas}
-                onAbrir={onAbrirAgendamento}
-                destacado={visao === "semana" && isSameDay(d, agora)}
-                interacao={interacao}
-                proposta={proposta}
-                arrasteDoCard={arrasteDoCard}
-              />
-            ))}
+    <TooltipProvider delayDuration={400}>
+      <div
+        data-testid="grade-da-agenda"
+        data-visao={visao}
+        className={cn(
+          "flex min-h-0 flex-col overflow-hidden rounded-lg border border-border bg-surface",
+          className,
+        )}
+      >
+        {visao === "mes" ? (
+          <VisaoDeMes
+            ancora={ancora}
+            agora={agora}
+            agendamentos={agendamentos}
+            pessoas={pessoas}
+            onAbrir={onAbrirAgendamento}
+          />
+        ) : (
+          // A rolagem mora AQUI dentro, e não na página: `html, body` têm
+          // `overflow-x: hidden` no globals.css, então uma grade que estourasse a
+          // largura simplesmente sumiria pela direita, sem barra para trazê-la de volta.
+          <div ref={gradeRef} className="flex min-h-0 flex-1 overflow-auto">
+            <ColunaDeHoras />
+            <div className="flex min-w-0 flex-1">
+              {dias.map((d) => (
+                <ColunaDeDia
+                  key={d.toISOString()}
+                  dia={d}
+                  agora={agora}
+                  agendamentos={agendamentos}
+                  pessoas={pessoas}
+                  onAbrir={onAbrirAgendamento}
+                  destacado={visao === "semana" && isSameDay(d, agora)}
+                  interacao={interacao}
+                  proposta={proposta}
+                  arrasteDoCard={arrasteDoCard}
+                />
+              ))}
+            </div>
           </div>
-        </div>
-      )}
-    </div>
+        )}
+      </div>
+    </TooltipProvider>
   );
 }
 

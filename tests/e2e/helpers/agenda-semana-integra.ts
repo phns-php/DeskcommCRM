@@ -291,3 +291,32 @@ export async function escolherUltimoDiaCheio(page: Page): Promise<string> {
   await page.getByTestId(`dia-${dia}`).click();
   return dia;
 }
+
+/**
+ * Quem será atendido + do que se trata — o passo que a marcação pela tela
+ * passou a exigir. Sem isto o botão de confirmar nasce desabilitado e a spec
+ * clica no vazio.
+ *
+ * `confirmacao` precisa já estar visível: a busca só existe naquele tempo.
+ */
+export async function informarQuemEDoQue(
+  page: Page,
+  nomeDoContato: string,
+  descricao = "Atendimento de teste E2E",
+): Promise<void> {
+  const busca = page.getByTestId("busca-contato-marcacao");
+  await expect(
+    busca,
+    "o passo de confirmar não pede contato — a marcação nasceria sem saber de quem é",
+  ).toBeVisible({ timeout: 10_000 });
+  await busca.fill(nomeDoContato);
+  const resultado = page.getByTestId("resultado-contato").filter({ hasText: nomeDoContato }).first();
+  await expect(
+    resultado,
+    `não achei o contato "${nomeDoContato}" na busca da marcação`,
+  ).toBeVisible({ timeout: 15_000 });
+  await resultado.click();
+  await expect(page.getByTestId("contato-escolhido")).toContainText(nomeDoContato);
+  await page.getByTestId("descricao-do-atendimento").fill(descricao);
+}
+

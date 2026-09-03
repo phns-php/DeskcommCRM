@@ -31,9 +31,14 @@ import {
   type Transicao,
 } from "@/lib/agenda/laco";
 import { ALVO_DE_VINCULO_DO_AGENDAMENTO, VINCULO_DE_AGENDAMENTO } from "@/lib/agenda/tipos";
+import {
+  descricaoDoAtendimento,
+  tituloDoCompromisso,
+} from "@/lib/agenda/titulo-do-compromisso";
 import { ApiError } from "@/lib/api/types";
 import type { Actor, HandlerCtx } from "@/lib/api/handlers/types";
 import { audit } from "@/lib/audit";
+import { rotuloDoContato } from "@/lib/contacts/rotulo-do-contato";
 import { resolveActiveLeadForContact, type LeadCandidate } from "@/lib/leads/active-lead";
 import { emitLeadActivity } from "@/lib/leads/activity-emitter";
 import { registraFalhaDeAtividade } from "@/lib/leads/activity-write-failure";
@@ -56,6 +61,8 @@ export interface MarcarInput {
   owner_user_id?: string;
   contact_id?: string;
   title?: string;
+  /** O que a equipe lê na grade e no Google — a UI manda aqui. */
+  description?: string;
   notes?: string;
   /** Destino do push — calendário Google escolhido no agente. */
   google_calendar_id?: string;
@@ -126,10 +133,11 @@ export async function marcarAgendamentoHandler(
   //
   // O molde é o de `app/api/v1/messages/_handler.ts:333` — resolver contra a org
   // e recusar com 404, sem dizer se o id existe noutro lugar.
+  let rotuloDoContatoResolvido: string | null = null;
   if (input.contact_id) {
     const { data: contato, error: erroContato } = await supabase
       .from("contacts")
-      .select("id")
+      .select("id, name, display_name, phone_number")
       .eq("id", input.contact_id)
       .eq("organization_id", ctx.organization_id)
       .maybeSingle();
@@ -139,6 +147,7 @@ export async function marcarAgendamentoHandler(
     if (!contato) {
       throw new ApiError(404, "not_found", undefined, ctx.requestId, "Contato não encontrado.");
     }
+    rotuloDoContatoResolvido = rotuloDoContato(contato);
   }
 
   const fim = new Date(inicio.getTime() + tipo.duration_minutes * 60_000);
@@ -163,7 +172,15 @@ export async function marcarAgendamentoHandler(
     .insert({
       organization_id: ctx.organization_id,
       event_type_id: tipo.id,
-      title: input.title ?? tipo.name,
+      title: tituloDoCompromisso({
+        tituloPedido: input.title,
+        nomeDoTipo: tipo.name,
+        rotuloDoContato: rotuloDoContatoResolvido,
+      }),
+      description: descricaoDoAtendimento({
+        description: input.description,
+        notes: input.notes,
+      }),
       starts_at: inicio.toISOString(),
       ends_at: fim.toISOString(),
       // O fuso do compromisso é campo de primeira classe: é o da JORNADA, onde

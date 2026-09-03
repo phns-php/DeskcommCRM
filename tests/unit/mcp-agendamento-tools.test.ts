@@ -282,6 +282,7 @@ describe("as escritas de agenda", () => {
     expect(crmBookAppointment.description).toMatch(/marcado:\s*true/i);
     expect(crmBookAppointment.description).toMatch(/marcado:\s*false/i);
     expect(crmBookAppointment.description).toMatch(/NÃO invente|nunca diga/i);
+    expect(crmBookAppointment.description).toMatch(/notes/);
   });
 
   it("⚠️ ApiError do handler vira RESPOSTA — exceção mataria o turno", async () => {

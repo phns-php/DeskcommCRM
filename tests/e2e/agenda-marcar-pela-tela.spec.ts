@@ -4,7 +4,7 @@ import * as path from "node:path";
 
 import { test, expect } from "@playwright/test";
 
-import { escolherDiaDesenhado, irParaASemanaSeguinte } from "./helpers/agenda-semana-integra";
+import { escolherDiaDesenhado, informarQuemEDoQue, irParaASemanaSeguinte } from "./helpers/agenda-semana-integra";
 
 /**
  * A PROVA EM TELA DA FRENTE 1 (API + motor) — agora ESCRITA, e o caminho até aqui
@@ -71,7 +71,7 @@ const RAIZ = path.resolve(__dirname, "../..");
 interface Creds {
   password: string;
   users: Record<string, { email: string } | undefined>;
-  agenda?: { tipo_nome: string; tipo_slug: string };
+  agenda?: { tipo_nome: string; tipo_slug: string; contato_nome?: string };
 }
 
 function lerCreds(): Creds {
@@ -190,6 +190,7 @@ test("marcar um horário pela tela e vê-lo aparecer na grade — sem recarregar
   // próprio botão de confirmar. Depois do clique o painel troca para a vista de
   // sucesso, e é `ver-na-agenda` que prova que a marcação foi aceita.
   await expect(page.getByTestId("confirmacao")).toBeVisible({ timeout: 10_000 });
+  await informarQuemEDoQue(page, creds.agenda.contato_nome ?? "Paciente Agenda E2E");
   await page.getByTestId("confirmar-marcacao").click();
   await expect(page.getByTestId("ver-na-agenda")).toBeVisible({ timeout: 15_000 });
 

@@ -315,3 +315,32 @@ describe("remarcar pelo TECLADO — o mesmo mecanismo do arraste", () => {
     expect(screen.getByTestId("agendamento-a1")).toHaveAttribute("data-arrastavel", "false");
   });
 });
+
+describe("clicar no card abre o compromisso", () => {
+  it("o clique chama onAbrir com o id — a fiação que a tela do produto não passava", () => {
+    const onAbrir = vi.fn();
+    const compromisso: Agendamento = {
+      id: "a1",
+      titulo: "Agendamento - Maria",
+      quemSeraAtendido: "Maria",
+      descricao: "Retorno",
+      responsavelId: "p1",
+      comeca: `${DIA}T14:00:00`,
+      termina: `${DIA}T14:30:00`,
+      origem: "ui",
+      situacao: "confirmed",
+    };
+    render(
+      <GradeDaAgenda
+        visao="dia"
+        ancora={new Date(`${DIA}T12:00:00`)}
+        agora={AGORA}
+        pessoas={PESSOAS}
+        agendamentos={[compromisso]}
+        onAbrirAgendamento={onAbrir}
+      />,
+    );
+    fireEvent.click(screen.getByTestId("agendamento-a1"));
+    expect(onAbrir).toHaveBeenCalledWith("a1");
+  });
+});

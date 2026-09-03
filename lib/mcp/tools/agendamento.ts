@@ -266,7 +266,13 @@ const marcarShape = {
   contact_id: z.string().uuid().describe("quem vai ser atendido"),
   owner_user_id: z.string().uuid().optional(),
   title: z.string().min(1).max(200).optional(),
-  notes: z.string().max(2000).optional(),
+  notes: z
+    .string()
+    .max(2000)
+    .optional()
+    .describe(
+      "do que se trata o atendimento — vira a descrição que a equipe lê na agenda. Sem isto o card só diz o tipo.",
+    ),
 };
 
 export const crmBookAppointment: McpToolDefinition<typeof marcarShape> = {
@@ -283,7 +289,9 @@ export const crmBookAppointment: McpToolDefinition<typeof marcarShape> = {
     "⚠️ SÓ diga ao cliente que marcou se a resposta trouxer `marcado: true`. " +
     "Se vier `marcado: false`, NÃO invente confirmação: leia `mensagem`, siga o que ela pede " +
     "(em geral consultar horários de novo) e avise o cliente com honestidade — " +
-    "nunca diga 'pronto, está marcado' quando a ferramenta recusou.",
+    "nunca diga 'pronto, está marcado' quando a ferramenta recusou. " +
+    "Preencha `notes` com o motivo do atendimento (o que a pessoa precisa, em uma frase): " +
+    "isso vira a descrição na agenda da equipe. Sem `notes` o card só mostra o tipo.",
   inputSchema: marcarShape,
   category: "write",
   requiresRole: "ai_operator",

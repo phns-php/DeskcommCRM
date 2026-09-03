@@ -38,11 +38,25 @@ export const dynamic = "force-dynamic";
  * gerador de tipos não consegue provar isso. Aceitar as duas formas evita que a
  * tela dependa de qual das duas o `database.types.ts` do dia declarou.
  */
-function nomeDoContato(
-  c: { name: string | null; display_name: string | null } | { name: string | null; display_name: string | null }[] | null,
-): string | undefined {
+type ContatoEmbed = {
+  name: string | null;
+  display_name: string | null;
+  phone_number?: string | null;
+  email?: string | null;
+};
+
+function dadosDoContato(c: ContatoEmbed | ContatoEmbed[] | null): {
+  nome?: string;
+  telefone?: string;
+  email?: string;
+} {
   const alvo = Array.isArray(c) ? c[0] : c;
-  return alvo?.name ?? alvo?.display_name ?? undefined;
+  if (!alvo) return {};
+  return {
+    nome: alvo.name ?? alvo.display_name ?? undefined,
+    telefone: alvo.phone_number?.trim() || undefined,
+    email: alvo.email?.trim() || undefined,
+  };
 }
 
 export default async function AgendaPage() {
@@ -104,7 +118,7 @@ export default async function AgendaPage() {
     supabase
       .from("calendar_appointments")
       .select(
-        "id, title, starts_at, ends_at, status, owner_user_id, contact_id, event_type_id, location_kind, source, contacts(name, display_name)",
+        "id, title, description, starts_at, ends_at, status, owner_user_id, contact_id, event_type_id, location_kind, source, contacts(name, display_name, phone_number, email)",
       )
       .eq("organization_id", activeOrg.orgId)
       .gte("starts_at", inicio.toISOString())
@@ -262,30 +276,33 @@ export default async function AgendaPage() {
         localKind: t.location_kind ?? null,
         localDetalhes: t.location_details ?? null,
       }))}
-      agendamentosIniciais={((linhas ?? []).map((a) => ({
-        id: a.id,
-        titulo: a.title ?? "Agendamento",
-        responsavelId: a.owner_user_id ?? "",
-        comeca: a.starts_at,
-        termina: a.ends_at,
-        origem: (a.source === "mcp" ||
-        a.source === "google_sync" ||
-        a.source === "microsoft_sync" ||
-        a.source === "caldav_sync" ||
-        a.source === "public_page"
-          ? a.source
-          : "ui") as AgendamentoDaTela["origem"],
-        situacao: a.status as "confirmed",
+      agendamentosIniciais={((linhas ?? []).map((a) => {
         // "com quem" é a promessa do subtítulo desta tela, e era a única parte
         // dela que o servidor não entregava: `contact_id` vinha no select e
-        // morria aqui. `dados-de-mentira.ts` preenche este campo nos 11 cards,
-        // então a tela pareceu pronta o tempo todo — e o `?? a.titulo` do
-        // histórico transformou a ausência em silêncio, não em erro.
-        // `name` antes de `display_name` segue o precedente do produto
-        // (`app/app/lgpd/requests/[id]/PreviewPanel.tsx`); as duas colunas são
-        // reescritas pelo cascade de LGPD, então nenhuma vaza titular anonimizado.
-        quemSeraAtendido: nomeDoContato(a.contacts),
-      })) as AgendamentoDaTela[]).concat(
+        // morria aqui. `name` antes de `display_name` segue o precedente do
+        // produto; as duas colunas são reescritas pelo cascade de LGPD.
+        const contato = dadosDoContato(a.contacts);
+        return {
+          id: a.id,
+          titulo: a.title ?? "Agendamento",
+          responsavelId: a.owner_user_id ?? "",
+          comeca: a.starts_at,
+          termina: a.ends_at,
+          origem: (a.source === "mcp" ||
+          a.source === "google_sync" ||
+          a.source === "microsoft_sync" ||
+          a.source === "caldav_sync" ||
+          a.source === "public_page"
+            ? a.source
+            : "ui") as AgendamentoDaTela["origem"],
+          situacao: a.status as "confirmed",
+          quemSeraAtendido: contato.nome,
+          contatoId: a.contact_id ?? undefined,
+          contatoTelefone: contato.telefone,
+          contatoEmail: contato.email,
+          descricao: a.description?.trim() ? a.description : undefined,
+        };
+      }) as AgendamentoDaTela[]).concat(
         /**
          * A ocupação do Google entra na MESMA lista, com `origem: "google_sync"`.
          *
