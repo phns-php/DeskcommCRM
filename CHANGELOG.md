@@ -8,6 +8,12 @@ Se você roda o DeskcommCRM numa VPS, **leia a seção da versão para a qual es
 
 ## [Não lançado]
 
+## [1.14.0] — 2026-09-03
+
+### Adicionado
+
+- **Agendamento com contato, descrição e detalhe na grade** Ao marcar um horário — pela tela ou pela IA — o compromisso passa a levar quem será atendido e a descrição do atendimento. Se o contato ainda não existe, o atendente cadastra Nome, Telefone e E-mail no próprio painel. Na grade o card aparece como "Agendamento - Nome"; passar o mouse mostra o resumo e o clique abre o detalhe com telefone, e-mail e descrição.
+
 ## [1.13.0] — 2026-08-30
 
 ### Corrigido
@@ -1608,7 +1614,8 @@ Primeira versão marcada do DeskcommCRM. O projeto vinha sendo desenvolvido publ
 
 - **Node 22 é obrigatório para desenvolvimento.** A suíte de invariantes instancia o cliente do Supabase, que exige o `WebSocket` global — nativo apenas a partir do Node 22. Isso não afeta quem apenas hospeda: a VPS roda a imagem pronta.
 
-[Não lançado]: https://github.com/phns-php/DeskcommCRM/compare/v1.13.0...HEAD
+[Não lançado]: https://github.com/phns-php/DeskcommCRM/compare/v1.14.0...HEAD
+[1.14.0]: https://github.com/phns-php/DeskcommCRM/compare/v1.13.0...v1.14.0
 [1.13.0]: https://github.com/phns-php/DeskcommCRM/compare/v1.12.0...v1.13.0
 [1.12.0]: https://github.com/phns-php/DeskcommCRM/compare/v1.11.1...v1.12.0
 [1.10.1]: https://github.com/melgarafael/DeskcommCRM/compare/v1.10.0...v1.10.1
