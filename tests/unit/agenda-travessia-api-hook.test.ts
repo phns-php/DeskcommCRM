@@ -136,7 +136,9 @@ describe("o compromisso atravessa a rota até a grade", () => {
     expect(bloco.id, "sem id a grade não sabe qual bloco foi clicado, e abrir um abre outro").toBe(
       "ag-1",
     );
-    expect(bloco.titulo, "bloco sem título na grade é um retângulo mudo").toBe("Consulta");
+    expect(bloco.titulo, "bloco sem título na grade é um retângulo mudo").toBe(
+      "Agendamento - Maria Ferraz",
+    );
     expect(
       bloco.responsavelId,
       "é o responsável que decide a COR e a coluna do bloco — sem ele todos " +

@@ -440,9 +440,16 @@ function BlocoDeAgendamento({
 
   // Toast no hover seria sonner: some em 4s e empilha. O card da grade pede
   // o resumo ENQUANTO o mouse está em cima — Tooltip, não notificação.
-  if (doGoogle || cancelado || arraste?.ativo) return card;
+  //
+  // ⚠️ NÃO DESMONTAR O TOOLTIP QUANDO O ARRASTE COMEÇA.
+  // Tirar o wrapper no `arraste.ativo` remonta o `<button>` e mata o foco:
+  // o primeiro Alt+seta abria a proposta e os seguintes (Enter, Escape, mais
+  // setas) iam para um nó morto. Medido no CI: os três casos de teclado da
+  // grade ficaram vermelhos. `open={false}` esconde o resumo no gesto sem
+  // trocar a árvore.
+  if (doGoogle || cancelado) return card;
   return (
-    <Tooltip delayDuration={400}>
+    <Tooltip delayDuration={400} open={arraste?.ativo ? false : undefined}>
       <TooltipTrigger asChild>{card}</TooltipTrigger>
       <TooltipContent
         side="top"
