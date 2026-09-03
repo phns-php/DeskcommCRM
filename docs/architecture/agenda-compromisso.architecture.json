@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Compromisso com contato e descrição",
+    "subtitle": "quem marca — humano ou IA — deixa na grade quem vem e do que se trata",
+    "output": "agenda-compromisso.html",
+    "quality_profile": "standard"
+  },
+  "lanes": [
+    { "id": "humano", "label": "O que a pessoa vê" },
+    { "id": "borda", "label": "Borda" },
+    { "id": "regra", "label": "Regra" },
+    { "id": "banco", "label": "Banco" }
+  ],
+  "mainPath": ["painel", "post", "handler", "titulo", "appointments", "grade"],
+  "nodes": [
+    { "id": "painel", "lane": "humano", "col": 1, "type": "frontend", "label": "PainelDeMarcacao", "sublabel": "busca contato · cadastrar Nome/Tel/Email · descrição" },
+    { "id": "mcp", "lane": "borda", "col": 1, "type": "api", "label": "crm_book_appointment", "sublabel": "contact_id obrigatório · notes vira description" },
+    { "id": "post", "lane": "borda", "col": 2, "type": "api", "label": "POST /agenda/agendamentos", "sublabel": "agent+ · Zod contact_id + description" },
+    { "id": "handler", "lane": "regra", "col": 2, "type": "service", "label": "marcarAgendamentoHandler", "sublabel": "mesma regra para a tela e para a IA" },
+    { "id": "titulo", "lane": "regra", "col": 3, "type": "service", "label": "tituloDoCompromisso", "sublabel": "Agendamento - Nome — nunca 'Sem nome'" },
+    { "id": "appointments", "lane": "banco", "col": 3, "type": "database", "label": "calendar_appointments", "sublabel": "title + description + contact_id" },
+    { "id": "get", "lane": "borda", "col": 4, "type": "api", "label": "GET /agenda/agendamentos", "sublabel": "devolve descricao, nome, telefone, email" },
+    { "id": "grade", "lane": "humano", "col": 4, "type": "frontend", "label": "GradeDaAgenda", "sublabel": "card: Agendamento - Nome" },
+    { "id": "tooltip", "lane": "humano", "col": 5, "type": "frontend", "label": "ResumoDoAgendamento", "sublabel": "hover — não é toast sonner" },
+    { "id": "sheet", "lane": "humano", "col": 5, "type": "frontend", "label": "PainelDoAgendamento", "sublabel": "clique: detalhe com tel/email/descrição" },
+    { "id": "google", "lane": "regra", "col": 4, "type": "service", "label": "paraEventoDoGoogle", "sublabel": "description viaja no espelho" },
+    { "id": "audit", "lane": "banco", "col": 5, "type": "database", "label": "api_audit_log", "sublabel": "agenda.appointment_created" },
+    { "id": "timeline", "lane": "banco", "col": 5, "type": "database", "label": "crm_lead_activities", "sublabel": "appointment_scheduled no dossiê" }
+  ],
+  "edges": [
+    { "id": "e1", "from": "painel", "to": "post", "label": "confirma com contact_id + description" },
+    { "id": "e2", "from": "mcp", "to": "handler", "label": "notes do modelo" },
+    { "id": "e3", "from": "post", "to": "handler", "label": "corpo validado" },
+    { "id": "e4", "from": "handler", "to": "titulo", "label": "compõe se ninguém mandou title" },
+    { "id": "e5", "from": "titulo", "to": "appointments", "label": "grava title ≤200" },
+    { "id": "e6", "from": "handler", "to": "appointments", "label": "INSERT com description" },
+    { "id": "e7", "from": "appointments", "to": "get", "label": "select description + contato" },
+    { "id": "e8", "from": "get", "to": "grade", "label": "useAgendamentos.map" },
+    { "id": "e9", "from": "grade", "to": "tooltip", "label": "passar o mouse" },
+    { "id": "e10", "from": "grade", "to": "sheet", "label": "clique no card" },
+    { "id": "e11", "from": "tooltip", "to": "sheet", "label": "o mesmo resumo, aberto" },
+    { "id": "e12", "from": "sheet", "to": "appointments", "label": "lê titulo, contato, description" },
+    { "id": "e13", "from": "appointments", "to": "google", "label": "cron push manda description" },
+    { "id": "e14", "from": "handler", "to": "audit", "label": "mutação bem-sucedida" },
+    { "id": "e15", "from": "handler", "to": "timeline", "label": "fecharOLaco se há lead" },
+    { "id": "e16", "from": "mcp", "to": "appointments", "label": "contact_id obrigatório na tool" }
+  ]
+}

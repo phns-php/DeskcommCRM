@@ -13,6 +13,7 @@ export interface NovoAgendamento {
   owner_user_id?: string;
   contact_id?: string;
   title?: string;
+  description?: string;
   notes?: string;
 }
 

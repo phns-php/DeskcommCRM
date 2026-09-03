@@ -364,8 +364,14 @@ export interface AgendamentoListado {
   donoId: string | null;
   contatoId: string | null;
   contatoNome: string | null;
+  /** Telefone da ficha — o detalhe do compromisso mostra sem abrir Contatos. */
+  contatoTelefone: string | null;
+  /** E-mail da ficha — mesmo motivo do telefone. */
+  contatoEmail: string | null;
   /** De onde nasceu — `ui` | `mcp` | … Espelha `calendar_appointments.source`. */
   origem: string;
+  /** O que o atendimento é — coluna `description`. Ausente = ninguém escreveu. */
+  descricao: string | null;
 }
 
 export interface ParametrosDaLista {
@@ -408,12 +414,26 @@ export type ResultadoDaLista =
   | { ok: true; agendamentos: AgendamentoListado[] }
   | { ok: false; codigo: "erro_interno" | "sem_alvo"; motivoParaOperador: string; motivoParaCliente: string };
 
+type ContatoEmbed = {
+  name: string | null;
+  display_name: string | null;
+  phone_number?: string | null;
+  email?: string | null;
+};
+
 /** O embed do PostgREST vem objeto ou array conforme o gerador de tipos; aceite os dois. */
-function nomeDoContato(
-  c: { name: string | null; display_name: string | null } | { name: string | null; display_name: string | null }[] | null | undefined,
-): string | null {
+function contatoDoEmbed(
+  c: ContatoEmbed | ContatoEmbed[] | null | undefined,
+): { nome: string | null; telefone: string | null; email: string | null } {
   const alvo = Array.isArray(c) ? c[0] : c;
-  return alvo?.name ?? alvo?.display_name ?? null;
+  if (!alvo) return { nome: null, telefone: null, email: null };
+  return {
+    nome: alvo.name ?? alvo.display_name ?? null,
+    telefone: typeof alvo.phone_number === "string" && alvo.phone_number.trim()
+      ? alvo.phone_number
+      : null,
+    email: typeof alvo.email === "string" && alvo.email.trim() ? alvo.email : null,
+  };
 }
 
 export async function listaAgendamentos(
@@ -469,7 +489,7 @@ export async function listaAgendamentos(
   let q = supabase
     .from("calendar_appointments")
     .select(
-      "id, title, starts_at, ends_at, time_zone, status, owner_user_id, contact_id, source, contacts(name, display_name)",
+      "id, title, description, starts_at, ends_at, time_zone, status, owner_user_id, contact_id, source, contacts(name, display_name, phone_number, email)",
     )
     .eq("organization_id", organizationId)
     .order("starts_at", { ascending: true })
@@ -520,24 +540,30 @@ export async function listaAgendamentos(
 
   return {
     ok: true,
-    agendamentos: (data ?? []).map((l) => ({
-      id: String(l.id),
-      titulo: String(l.title),
-      iniciaEm: String(l.starts_at),
-      terminaEm: String(l.ends_at),
-      fuso: String(l.time_zone),
-      situacao: String(l.status),
-      donoId: l.owner_user_id ? String(l.owner_user_id) : null,
-      contatoId: l.contact_id ? String(l.contact_id) : null,
-      // O ID sozinho não serve a nenhum dos dois consumidores: a grade precisa do
-      // nome para dizer "com quem", e o AGENTE recebia um uuid cru onde devia
-      // dizer "você já tem consulta marcada, Maria". Mesma coluna que a tela do
-      // produto lê, mesmo precedente de `name` antes de `display_name`.
-      contatoNome: nomeDoContato(l.contacts),
-      // Sem isto o refetch da grade pintava todo compromisso como `ui` — e a
-      // marcação do agente parecia "sumida" ou "manual" conforme o olhar.
-      origem: typeof l.source === "string" && l.source ? String(l.source) : "ui",
-    })),
+    agendamentos: (data ?? []).map((l) => {
+      const contato = contatoDoEmbed(l.contacts as ContatoEmbed | ContatoEmbed[] | null);
+      return {
+        id: String(l.id),
+        titulo: String(l.title),
+        iniciaEm: String(l.starts_at),
+        terminaEm: String(l.ends_at),
+        fuso: String(l.time_zone),
+        situacao: String(l.status),
+        donoId: l.owner_user_id ? String(l.owner_user_id) : null,
+        contatoId: l.contact_id ? String(l.contact_id) : null,
+        // O ID sozinho não serve a nenhum dos dois consumidores: a grade precisa do
+        // nome para dizer "com quem", e o AGENTE recebia um uuid cru onde devia
+        // dizer "você já tem consulta marcada, Maria". Mesma coluna que a tela do
+        // produto lê, mesmo precedente de `name` antes de `display_name`.
+        contatoNome: contato.nome,
+        contatoTelefone: contato.telefone,
+        contatoEmail: contato.email,
+        // Sem isto o refetch da grade pintava todo compromisso como `ui` — e a
+        // marcação do agente parecia "sumida" ou "manual" conforme o olhar.
+        origem: typeof l.source === "string" && l.source ? String(l.source) : "ui",
+        descricao: typeof l.description === "string" && l.description.trim() ? l.description : null,
+      };
+    }),
   };
 }
 

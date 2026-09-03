@@ -47,6 +47,7 @@ const marcarSchema = z.object({
   owner_user_id: z.string().uuid().optional(),
   contact_id: z.string().uuid().optional(),
   title: z.string().min(1).max(200).optional(),
+  description: z.string().max(2000).optional(),
   notes: z.string().max(2000).optional(),
 });
 

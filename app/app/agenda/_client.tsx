@@ -21,6 +21,7 @@ import { EmptyAgenda } from "@/components/empty";
 import { rotuloDoLocal } from "@/lib/agenda/locais";
 import { Button } from "@/components/ui/button";
 import { PainelDeMarcacao } from "@/components/agenda/PainelDeMarcacao";
+import { PainelDoAgendamento } from "@/components/agenda/PainelDoAgendamento";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useAgendamentos } from "@/hooks/agenda/useAgendamentos";
 import { useHorariosLivres } from "@/hooks/agenda/useHorariosLivres";
@@ -124,6 +125,7 @@ export function AgendaClient({
   // o que a equipe lê ao ver o horário vago.
   const [cancelandoId, setCancelandoId] = React.useState<string | null>(null);
   const [motivo, setMotivo] = React.useState("");
+  const [visualizandoId, setVisualizandoId] = React.useState<string | null>(null);
   const marcar = useMarcarAgendamento();
   const remarcar = useRemarcarAgendamento();
   const cancelar = useCancelarAgendamento();
@@ -536,9 +538,10 @@ export function AgendaClient({
                 fusoSuposto={horarios?.fuso_suposto ?? false}
                 fontesDefasadas={horarios?.fontes_defasadas}
                 horarioInicial={horarioEscolhido ?? undefined}
+                exigeContato={!remarcandoId}
                 // ESTE é o fio que faltava. Sem ele o "Marcado ✓" era estado
                 // local do React e nenhuma linha nascia no banco.
-                onConfirmar={(instante) => {
+                onConfirmar={({ instante, contactId, descricao }) => {
                   // ⚠️ SEM `owner_user_id`, e é isto que conserta o 422.
                   //
                   // Isto mandava `pessoas[0]?.id` — a PRIMEIRA pessoa da lista.
@@ -562,7 +565,12 @@ export function AgendaClient({
                         return r;
                       });
                   }
-                  return marcar.mutateAsync({ event_type_id: tipo.id, starts_at: instante });
+                  return marcar.mutateAsync({
+                    event_type_id: tipo.id,
+                    starts_at: instante,
+                    contact_id: contactId,
+                    description: descricao,
+                  });
                 }}
                 // "VER NA AGENDA" — o botão que não fazia nada.
                 //
@@ -586,6 +594,43 @@ export function AgendaClient({
               />
             </div>
           )}
+        </SheetContent>
+      </Sheet>
+
+      <Sheet
+        open={visualizandoId !== null}
+        onOpenChange={(aberto) => {
+          if (!aberto) setVisualizandoId(null);
+        }}
+      >
+        <SheetContent side="right" className="w-full sm:max-w-md">
+          <SheetHeader>
+            <SheetTitle>{t("Detalhe do agendamento")}</SheetTitle>
+          </SheetHeader>
+          {(() => {
+            const alvo = todos.find((a) => a.id === visualizandoId);
+            if (!alvo) {
+              return (
+                <p className="mt-4 text-sm text-text-muted">{t("Este agendamento não está mais na lista.")}</p>
+              );
+            }
+            return (
+              <PainelDoAgendamento
+                agendamento={alvo}
+                onRemarcar={(id) => {
+                  setVisualizandoId(null);
+                  setRemarcandoId(id);
+                  setHorarioEscolhido(null);
+                  setMarcando(true);
+                }}
+                onCancelar={(id) => {
+                  setVisualizandoId(null);
+                  setMotivo("");
+                  setCancelandoId(id);
+                }}
+              />
+            );
+          })()}
         </SheetContent>
       </Sheet>
 
@@ -722,6 +767,7 @@ export function AgendaClient({
           setRemarcandoId(null);
           setMarcando(true);
         }}
+        onAbrirAgendamento={(id) => setVisualizandoId(id)}
         className="min-h-0 flex-1"
       />
 

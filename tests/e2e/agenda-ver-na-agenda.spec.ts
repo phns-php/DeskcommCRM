@@ -3,7 +3,7 @@ import * as path from "node:path";
 
 import { test, expect, type Page } from "@playwright/test";
 
-import { escolherUltimoDiaCheio } from "./helpers/agenda-semana-integra";
+import { escolherUltimoDiaCheio, informarQuemEDoQue } from "./helpers/agenda-semana-integra";
 
 /**
  * "VER NA AGENDA" LEVA ATÉ O COMPROMISSO — o botão que não fazia nada.
@@ -40,7 +40,7 @@ test.describe.configure({ timeout: 180_000 });
 interface Creds {
   password: string;
   users: Record<string, { email: string } | undefined>;
-  agenda?: { tipo_nome: string };
+  agenda?: { tipo_nome: string; contato_nome?: string };
 }
 
 function lerCreds(): Creds {
@@ -90,6 +90,7 @@ test("marcar, clicar em 'Ver na agenda', e ENCONTRAR o compromisso na grade", as
   await horario.click();
 
   await expect(page.getByTestId("confirmacao")).toBeVisible({ timeout: 10_000 });
+  await informarQuemEDoQue(page, creds.agenda!.contato_nome ?? "Paciente Agenda E2E");
   await page.getByTestId("confirmar-marcacao").click();
 
   const verNaAgenda = page.getByTestId("ver-na-agenda");

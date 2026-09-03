@@ -445,3 +445,46 @@ describe("quando a gravação da timeline falha", () => {
     ).toHaveLength(0);
   });
 });
+
+describe("o título e a descrição nascem preenchidos", () => {
+  it("com contato nomeado, o título é 'Agendamento - Nome' e notes vira description", async () => {
+    banco.contato = {
+      id: CONTATO,
+      name: "Maria Ferraz",
+      display_name: null,
+      phone_number: null,
+    };
+
+    await marcarAgendamentoHandler(cliente(), ctx, {
+      event_type_id: TIPO,
+      starts_at: HORARIO,
+      contact_id: CONTATO,
+      notes: "dor no joelho esquerdo",
+    });
+
+    const linha = (banco.inserido["calendar_appointments"] ?? [])[0];
+    expect(
+      linha,
+      "marcar não gravou a linha do compromisso — título e descrição não têm onde morar",
+    ).toBeTruthy();
+    expect(
+      linha?.title,
+      "sem o nome no título o card de 30min só diz 'Consulta' e quem atende não sabe quem vem",
+    ).toBe("Agendamento - Maria Ferraz");
+    expect(
+      linha?.description,
+      "notes do MCP tem de virar a description que a grade e o Google leem",
+    ).toBe("dor no joelho esquerdo");
+  });
+
+  it("sem contato e sem título pedido, o título fica o nome do tipo — nunca 'Agendamento - Sem nome'", async () => {
+    banco.contato = null;
+    await marcarAgendamentoHandler(cliente(), ctx, {
+      event_type_id: TIPO,
+      starts_at: HORARIO,
+    });
+    const linha = (banco.inserido["calendar_appointments"] ?? [])[0];
+    expect(linha?.title).toBe("Consulta");
+    expect(linha?.description).toBeNull();
+  });
+});

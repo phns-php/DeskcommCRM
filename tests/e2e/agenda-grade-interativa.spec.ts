@@ -4,7 +4,7 @@ import * as path from "node:path";
 
 import { test, expect, type Page } from "@playwright/test";
 
-import { irParaASemanaSeguinte } from "./helpers/agenda-semana-integra";
+import { informarQuemEDoQue, irParaASemanaSeguinte } from "./helpers/agenda-semana-integra";
 
 /**
  * A GRADE COMO AGENDA DE VERDADE — clicar num bloco marca, arrastar um card
@@ -37,7 +37,7 @@ const RAIZ = path.resolve(__dirname, "../..");
 interface Creds {
   password: string;
   users: Record<string, { email: string } | undefined>;
-  agenda?: { tipo_nome: string; tipo_slug: string };
+  agenda?: { tipo_nome: string; tipo_slug: string; contato_nome?: string };
 }
 
 function lerCreds(): Creds {
@@ -223,6 +223,7 @@ test("arrastar um card remarca — e o horário novo sobrevive ao reload", async
   const testidOrigem = (await origem.getAttribute("data-testid"))!;
   await origem.click();
   await expect(page.getByTestId("painel-de-marcacao")).toBeVisible({ timeout: 15_000 });
+  await informarQuemEDoQue(page, creds.agenda!.contato_nome ?? "Paciente Agenda E2E");
   await page.getByTestId("confirmar-marcacao").click();
   await expect(page.getByTestId("ver-na-agenda")).toBeVisible({ timeout: 20_000 });
   await page.keyboard.press("Escape");
@@ -385,6 +386,7 @@ test("arrastar para fora da disponibilidade é RECUSADO e o card volta", async (
   const testidOrigem = (await origem.getAttribute("data-testid"))!;
   await origem.click();
   await expect(page.getByTestId("painel-de-marcacao")).toBeVisible({ timeout: 15_000 });
+  await informarQuemEDoQue(page, creds.agenda!.contato_nome ?? "Paciente Agenda E2E");
   await page.getByTestId("confirmar-marcacao").click();
   await expect(page.getByTestId("ver-na-agenda")).toBeVisible({ timeout: 20_000 });
   await page.keyboard.press("Escape");

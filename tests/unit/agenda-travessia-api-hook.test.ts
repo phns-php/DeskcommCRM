@@ -65,9 +65,9 @@ const RECORTE = { de: "2026-09-01T03:00:00.000Z", ate: "2026-09-08T03:00:00.000Z
  * `satisfies`, por um literal solto ou por `as AgendamentoListado` desliga o
  * alarme de compilação e deixa só metade da cerca em pé.
  */
-const MARIA: AgendamentoListado = {
+  const MARIA: AgendamentoListado = {
   id: "ag-1",
-  titulo: "Consulta",
+  titulo: "Agendamento - Maria Ferraz",
   iniciaEm: "2026-09-02T13:00:00.000Z",
   terminaEm: "2026-09-02T13:30:00.000Z",
   fuso: "America/Sao_Paulo",
@@ -75,7 +75,10 @@ const MARIA: AgendamentoListado = {
   donoId: "u-ana",
   contatoId: "c-maria",
   contatoNome: "Maria Ferraz",
+  contatoTelefone: "+5511999998888",
+  contatoEmail: "maria@exemplo.com",
   origem: "ui",
+  descricao: "Avaliação inicial — dor no joelho.",
 };
 
 /** O corpo EXATO do wire: `ok()` é o mesmo wrapper que a rota chama no `return`. */
@@ -133,7 +136,9 @@ describe("o compromisso atravessa a rota até a grade", () => {
     expect(bloco.id, "sem id a grade não sabe qual bloco foi clicado, e abrir um abre outro").toBe(
       "ag-1",
     );
-    expect(bloco.titulo, "bloco sem título na grade é um retângulo mudo").toBe("Consulta");
+    expect(bloco.titulo, "bloco sem título na grade é um retângulo mudo").toBe(
+      "Agendamento - Maria Ferraz",
+    );
     expect(
       bloco.responsavelId,
       "é o responsável que decide a COR e a coluna do bloco — sem ele todos " +
@@ -162,6 +167,15 @@ describe("o compromisso atravessa a rota até a grade", () => {
       'este é o campo que já se perdeu uma vez: sem ele o card diz "Consulta" e ' +
         "não diz com quem — quem atende abre a tela e não sabe quem vai chegar",
     ).toBe("Maria Ferraz");
+  });
+
+  it("descricao atravessa: a grade e o detalhe sabem DO QUE se trata", async () => {
+    const bloco = unico(await oQueAGradeRecebe(await corpoDaRota([MARIA])));
+    expect(
+      bloco.descricao,
+      "sem isto o clique no card abre um detalhe mudo — título e horário, e ninguém lembra por que marcou",
+    ).toBe("Avaliação inicial — dor no joelho.");
+    expect(bloco.contatoId).toBe("c-maria");
   });
 
   it("...e o PAR: sem contato, o campo fica AUSENTE — nunca 'null' escrito na tela", async () => {

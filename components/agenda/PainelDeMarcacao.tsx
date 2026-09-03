@@ -9,10 +9,12 @@ import Link from "next/link";
 import * as React from "react";
 
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { CaretLeft, CaretRight, CheckCircle, Clock, MapPin, Warning } from "@/lib/ui/icons";
 import { cn } from "@/lib/utils";
 
 import { AvatarDaPessoa } from "./AvatarDaPessoa";
+import { BuscaDeContatoDaMarcacao } from "./BuscaDeContatoDaMarcacao";
 import type { HorarioLivre, Pessoa } from "./tipos";
 
 /**
@@ -45,6 +47,7 @@ export function PainelDeMarcacao({
   fontesDefasadas,
   quemSeraAtendido,
   horarioInicial,
+  exigeContato = false,
   onConfirmar,
   onVerNaAgenda,
   className,
@@ -137,7 +140,17 @@ export function PainelDeMarcacao({
    * ofereceria.
    */
   horarioInicial?: HorarioLivre;
-  onConfirmar?: (instante: string) => void | Promise<unknown>;
+  /**
+   * Nova marcação no produto pede contato: sem ele o card nasce sem saber de
+   * quem é o compromisso. A vitrine NÃO passa — default false — senão o kit
+   * visual quebra no botão de confirmar.
+   */
+  exigeContato?: boolean;
+  onConfirmar?: (entrada: {
+    instante: string;
+    contactId?: string;
+    descricao?: string;
+  }) => void | Promise<unknown>;
   className?: string;
 }) {
   const localeDaData = useLocaleDeData();
@@ -153,6 +166,11 @@ export function PainelDeMarcacao({
   const [mes, setMes] = React.useState(() =>
     startOfMonth(horarioInicial ? new Date(horarioInicial.instante) : ancora),
   );
+  const [contatoEscolhido, setContatoEscolhido] = React.useState<{
+    id: string;
+    nome: string;
+  } | null>(null);
+  const [descricao, setDescricao] = React.useState("");
 
   /**
    * O painel pode continuar montado entre duas aberturas (o `Sheet` decide
@@ -171,6 +189,8 @@ export function PainelDeMarcacao({
     setHorario({ instante: instanteInicial, rotulo: format(d, "HH:mm") });
     setMes(startOfMonth(d));
     setMarcado(null);
+    setContatoEscolhido(null);
+    setDescricao("");
   }, [instanteInicial]);
 
   const tempo: TempoDaMarcacao = marcado
@@ -279,7 +299,7 @@ export function PainelDeMarcacao({
             </p>
           )}
           <div className="mt-5 flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => { setMarcado(null); setHorario(null); setDia(null); }}>
+            <Button variant="outline" size="sm" onClick={() => { setMarcado(null); setHorario(null); setDia(null); setContatoEscolhido(null); setDescricao(""); }}>
               {t("Marcar outro")}
             </Button>
             {/*
@@ -591,6 +611,38 @@ export function PainelDeMarcacao({
                 </p>
               </div>
             )}
+
+            {exigeContato && (
+              <div className="mt-3 space-y-3">
+                <div>
+                  <p className="mb-1.5 text-xs font-medium text-text-muted">{t("Quem será atendido")}</p>
+                  <BuscaDeContatoDaMarcacao
+                    contatoId={contatoEscolhido?.id ?? null}
+                    nome={contatoEscolhido?.nome ?? null}
+                    onEscolher={setContatoEscolhido}
+                    onLimpar={() => setContatoEscolhido(null)}
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="descricao-do-atendimento"
+                    className="mb-1.5 block text-xs font-medium text-text-muted"
+                  >
+                    {t("Descrição do atendimento")}
+                  </label>
+                  <Textarea
+                    id="descricao-do-atendimento"
+                    data-testid="descricao-do-atendimento"
+                    value={descricao}
+                    onChange={(e) => setDescricao(e.target.value)}
+                    rows={3}
+                    maxLength={2000}
+                    placeholder={t("Sobre o que é este atendimento?")}
+                    className="min-h-[72px] px-3 py-2 text-sm"
+                  />
+                </div>
+              </div>
+            )}
             <div className="mt-3 flex items-center justify-end gap-2">
               <Button variant="ghost" size="sm" onClick={() => setHorario(null)}>
                 {t("Voltar")}
@@ -598,6 +650,12 @@ export function PainelDeMarcacao({
               <Button
                 size="sm"
                 data-testid="confirmar-marcacao"
+                disabled={exigeContato && !contatoEscolhido}
+                title={
+                  exigeContato && !contatoEscolhido
+                    ? t("Escolha quem será atendido para confirmar")
+                    : undefined
+                }
                 onClick={async () => {
                   // ⚠️ ERA `setMarcado(horario); onConfirmar?.(...)` — nesta ordem
                   // e sem esperar. A vista de sucesso aparecia por estado local do
@@ -610,7 +668,11 @@ export function PainelDeMarcacao({
                   // `showApiError` aparece e o painel fica onde estava, com o
                   // horário ainda escolhido para tentar de novo.
                   try {
-                    await onConfirmar?.(horario.instante);
+                    await onConfirmar?.({
+                      instante: horario.instante,
+                      contactId: contatoEscolhido?.id,
+                      descricao: descricao.trim() || undefined,
+                    });
                     setMarcado(horario);
                   } catch {
                     // silêncio proposital: quem reporta é o `showApiError` da

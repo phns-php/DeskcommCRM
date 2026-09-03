@@ -37,11 +37,11 @@ const SEG = startOfWeek(ANCORA, { weekStartsOn: 0 });
  * estados que a grade precisa desenhar diferente.
  */
 export const AGENDAMENTOS: Agendamento[] = [
-  { id: "c1", titulo: "Avaliação inicial", quemSeraAtendido: "Marina Alves", responsavelId: "ana", comeca: em(addDays(SEG, 1), 9, 0), termina: em(addDays(SEG, 1), 9, 45), tipo: "Consulta", origem: "ui", situacao: "confirmed" },
+  { id: "c1", titulo: "Avaliação inicial", quemSeraAtendido: "Marina Alves", descricao: "Primeira consulta — queixa de dor no joelho esquerdo.", contatoId: "ct-marina", responsavelId: "ana", comeca: em(addDays(SEG, 1), 9, 0), termina: em(addDays(SEG, 1), 9, 45), tipo: "Consulta", origem: "ui", situacao: "confirmed" },
   { id: "c2", titulo: "Retorno", quemSeraAtendido: "Pedro Lima", responsavelId: "bruno", comeca: em(addDays(SEG, 1), 10, 30), termina: em(addDays(SEG, 1), 11, 0), tipo: "Retorno", origem: "ui", situacao: "confirmed" },
   { id: "c3", titulo: "Visita ao imóvel", quemSeraAtendido: "Família Souza", responsavelId: "clara", comeca: em(addDays(SEG, 2), 14, 0), termina: em(addDays(SEG, 2), 15, 30), tipo: "Visita", origem: "ui", situacao: "confirmed" },
   { id: "c4", titulo: "Almoço da equipe", responsavelId: "ana", comeca: em(addDays(SEG, 3), 12, 0), termina: em(addDays(SEG, 3), 13, 0), origem: "google_sync", situacao: "confirmed" },
-  { id: "c5", titulo: "Consulta", quemSeraAtendido: "Rita Campos", responsavelId: "ana", comeca: em(addDays(SEG, 3), 15, 0), termina: em(addDays(SEG, 3), 15, 30), tipo: "Consulta", origem: "ui", situacao: "confirmed" },
+  { id: "c5", titulo: "Consulta", quemSeraAtendido: "Rita Campos", descricao: "Retorno da avaliação — conferir exames.", contatoId: "ct-rita", responsavelId: "ana", comeca: em(addDays(SEG, 3), 15, 0), termina: em(addDays(SEG, 3), 15, 30), tipo: "Consulta", origem: "ui", situacao: "confirmed" },
   { id: "c6", titulo: "Procedimento", quemSeraAtendido: "João Bento", responsavelId: "davi", comeca: em(addDays(SEG, 3), 16, 0), termina: em(addDays(SEG, 3), 17, 30), tipo: "Procedimento", origem: "ui", situacao: "pending" },
   { id: "c7", titulo: "Retorno", quemSeraAtendido: "Ícaro Melo", responsavelId: "bruno", comeca: em(addDays(SEG, 4), 8, 30), termina: em(addDays(SEG, 4), 9, 0), tipo: "Retorno", origem: "ui", situacao: "cancelled" },
   { id: "c8", titulo: "Reunião comercial", quemSeraAtendido: "Loja Verde", responsavelId: "clara", comeca: em(addDays(SEG, 4), 11, 0), termina: em(addDays(SEG, 4), 12, 0), tipo: "Call", origem: "ui", situacao: "confirmed" },

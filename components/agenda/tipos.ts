@@ -67,6 +67,14 @@ export type Agendamento = {
   local?: string;
   origem: OrigemDoAgendamento;
   situacao: SituacaoDoAgendamento;
+  /** O que o atendimento é. Ausente = ninguém escreveu. */
+  descricao?: string;
+  /** Ficha do contato — o clique no detalhe leva até ela. */
+  contatoId?: string;
+  /** Telefone da ficha — aparece no detalhe sem sair da agenda. */
+  contatoTelefone?: string;
+  /** E-mail da ficha — mesmo motivo do telefone. */
+  contatoEmail?: string;
 };
 
 /** Um horário oferecido pelo painel de marcação. */
