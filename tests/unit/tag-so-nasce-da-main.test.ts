@@ -98,7 +98,9 @@ describe("a tag nasce no CI, e nunca do GITHUB_TOKEN", () => {
   });
 
   it("a tag só é criada em push na main, nunca num dispatch de branch qualquer", () => {
-    expect(job(release, "cortar-tag")).toMatch(/if:\s*github\.event_name == 'push'/);
+    expect(job(release, "cortar-tag")).toMatch(
+      /if:\s*github\.event_name == 'push' && secrets\.RELEASE_APP_ID != ''/,
+    );
     expect(release).toMatch(/push:\s*\n\s*branches:\s*\[main\]/);
   });
 });

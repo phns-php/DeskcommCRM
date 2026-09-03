@@ -89,7 +89,12 @@ jobs:
             --title "Release ${VERSAO}" --body-file /tmp/corpo.md
 
   cortar-tag:
-    if: github.event_name == 'push'
+    # Sem o App, `create-github-app-token` cai em `appId option is required`
+    # no primeiro passo — e pinta de vermelho todo push da main. No fork
+    # self-host isso é o padrão: a tag e as imagens saem por outro caminho
+    # (`git tag` + publish-image.yml). Pular o job deixa o canal de release
+    # do upstream intacto e o Actions do fork sem falso alarme.
+    if: github.event_name == 'push' && secrets.RELEASE_APP_ID != ''
     runs-on: ubuntu-latest
     permissions:
       contents: read
