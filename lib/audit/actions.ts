@@ -405,6 +405,7 @@ export const AUDIT_ACTIONS = [
   // Relógio HTTP (Hobby / sem contêiner scheduler): uma batida que alguém
   // de fora chama. Só audita quando alguma tarefa mexeu em dado.
   "relogio.tick_run",
+  "platform_admin.user_password_updated",
 ] as const;
 
 /** Um código de auditoria. Derivado de `AUDIT_ACTIONS` — não redigite a lista. */
