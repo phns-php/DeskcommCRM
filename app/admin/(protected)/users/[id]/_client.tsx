@@ -19,6 +19,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { CaretLeft } from "@/lib/ui/icons";
+import { EditarSenhaDoUsuarioDialog } from "@/components/admin/users/EditarSenhaDoUsuarioDialog";
 import { useAdminUser } from "@/hooks/useAdminUser";
 import { useT } from "@/hooks/i18n/useT";
 
@@ -125,14 +126,17 @@ export function UserDetailClient({ id }: UserDetailClientProps) {
       </div>
 
       {/* Header */}
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">
-          {user.full_name ?? user.email ?? t("Usuário sem nome")}
-        </h1>
-        {user.full_name && (
-          <p className="font-mono text-sm text-muted-foreground">{user.email}</p>
-        )}
-        <p className="text-xs text-muted-foreground font-mono">{user.id}</p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-semibold tracking-tight">
+            {user.full_name ?? user.email ?? t("Usuário sem nome")}
+          </h1>
+          {user.full_name && (
+            <p className="font-mono text-sm text-muted-foreground">{user.email}</p>
+          )}
+          <p className="text-xs text-muted-foreground font-mono">{user.id}</p>
+        </div>
+        <EditarSenhaDoUsuarioDialog userId={user.id} />
       </div>
 
       <Separator />

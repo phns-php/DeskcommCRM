@@ -2361,6 +2361,14 @@ export const DICIONARIO: Traducoes = {
   "Nenhuma entrada de auditoria encontrada para este usuário.": {
     es: "No se encontró ninguna entrada de auditoría para este usuario.",
   },
+  "Editar senha": { es: "Editar contraseña" },
+  "Escolha uma nova senha para esta conta.": {
+    es: "Elige una nueva contraseña para esta cuenta.",
+  },
+  "Senha atualizada": { es: "Contraseña actualizada" },
+  "Não foi possível alterar a senha.": {
+    es: "No se pudo cambiar la contraseña.",
+  },
   "usuário": { es: "usuario" },
   "usuários": { es: "usuarios" },
 
