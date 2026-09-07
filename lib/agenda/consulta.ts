@@ -38,6 +38,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { lerConfigDaAgendaExterna } from "./config-externa";
 import { horariosLivres, type ExcecaoDeData, type Slot } from "./horarios-livres";
 import { lerJornadaDoBanco } from "./jornada";
+import { uuidInformado } from "./uuid-informado";
 import {
   agendaExternaNuncaLida,
   ocupadosDoDono,
@@ -164,7 +165,7 @@ export async function horariosLivresDaOrg(
     };
   }
 
-  const donoId = params.ownerUserId ?? tipo.default_owner_user_id;
+  const donoId = uuidInformado(params.ownerUserId ?? undefined) ?? tipo.default_owner_user_id;
   if (!donoId) {
     // Sem dono não há jornada, e sem jornada não há horário. Lista vazia aqui
     // faria a tela dizer "nenhum horário disponível" para uma configuração
@@ -441,11 +442,15 @@ export async function listaAgendamentos(
   organizationId: string,
   params: ParametrosDaLista,
 ): Promise<ResultadoDaLista> {
+  let contactId = uuidInformado(params.contactId ?? undefined) ?? null;
+  let leadId = uuidInformado(params.leadId ?? undefined) ?? null;
+  const ownerUserId = uuidInformado(params.ownerUserId ?? undefined) ?? null;
+
   const temAlvo = Boolean(
-    params.contactId ||
-      params.leadId ||
+    contactId ||
+      leadId ||
       params.dia ||
-      params.ownerUserId ||
+      ownerUserId ||
       params.googleCalendarId ||
       (params.de && params.ate),
   );
@@ -463,14 +468,14 @@ export async function listaAgendamentos(
   }
 
   let idsPorLead: string[] | null = null;
-  if (params.leadId) {
+  if (leadId) {
     // DECISÃO 6: o vínculo é polimórfico. `target_kind='appointment'` já está no CHECK
     // de `crm_lead_links` desde antes desta entrega.
     const { data, error } = await supabase
       .from("crm_lead_links")
       .select("target_id")
       .eq("organization_id", organizationId)
-      .eq("lead_id", params.leadId)
+      .eq("lead_id", leadId)
       .eq("target_kind", "appointment");
     if (error) {
       return {
@@ -481,9 +486,24 @@ export async function listaAgendamentos(
       };
     }
     idsPorLead = (data ?? []).map((l) => String(l.target_id));
-    // Lead sem nenhum vínculo: lista vazia é a resposta CERTA aqui — a pergunta era
-    // "o que este negócio tem marcado?" e a resposta é "nada". Diferente de não saber.
-    if (idsPorLead.length === 0) return { ok: true, agendamentos: [] };
+    if (idsPorLead.length === 0) {
+      // O turno do WhatsApp chama o UUID do CONTATO de `lead_id`. Sem este
+      // remapeamento a listagem pergunta pelos vínculos de um negócio que
+      // não existe e devolve vazio — com a consulta gravada no contato.
+      const { data: comoContato } = await supabase
+        .from("contacts")
+        .select("id")
+        .eq("organization_id", organizationId)
+        .eq("id", leadId)
+        .maybeSingle();
+      if (comoContato?.id) {
+        if (!contactId) contactId = leadId;
+        leadId = null;
+        idsPorLead = null;
+      } else {
+        return { ok: true, agendamentos: [] };
+      }
+    }
   }
 
   let q = supabase
@@ -496,8 +516,8 @@ export async function listaAgendamentos(
     .limit(params.limite);
 
   if (idsPorLead) q = q.in("id", idsPorLead);
-  if (params.contactId) q = q.eq("contact_id", params.contactId);
-  if (params.ownerUserId) q = q.eq("owner_user_id", params.ownerUserId);
+  if (contactId) q = q.eq("contact_id", contactId);
+  if (ownerUserId) q = q.eq("owner_user_id", ownerUserId);
   if (params.googleCalendarId) q = q.eq("google_calendar_id", params.googleCalendarId);
   if (params.situacao) q = q.eq("status", params.situacao);
   if (params.dia) {

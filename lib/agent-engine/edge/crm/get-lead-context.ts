@@ -65,6 +65,14 @@ export interface UltimaDecisaoHumana {
 /** Payload curado que o modelo recebe. */
 export interface LeadContext {
   lead_id: string;
+  /**
+   * UUID do CONTATO. Neste runtime `lead_id` é o mesmo valor — o turno do
+   * WhatsApp chama o contato de lead. As tools de agenda leem `contact_id`.
+   * Sem este campo o modelo copia `lead_id` para o campo errado ou inventa
+   * UUID zero. Opcional no tipo para não forçar fixture congelado em
+   * `tests/invariants/**`; o produtor (`getLeadContext`) sempre preenche.
+   */
+  contact_id?: string;
   contact: {
     name: string | null;
     phone: string | null;
@@ -234,6 +242,7 @@ export async function getLeadContext(
   const context = fitToBudget(
     {
       lead_id: input.leadId,
+      contact_id: input.leadId,
       contact: {
         name: contact.display_name ?? contact.name,
         phone: contact.phone_number,
