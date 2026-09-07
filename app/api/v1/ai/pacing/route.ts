@@ -20,6 +20,7 @@ import {
   effectiveKnobs,
   windowIsValid,
   WARMUP_PULADO,
+  ativacaoParaColuna,
   type ChannelKnobsRow,
 } from "@/lib/ai/pacing-knobs";
 
@@ -85,8 +86,11 @@ export async function PUT(req: NextRequest): Promise<Response> {
   // `skip_warmup` é pergunta da TELA; a coluna guarda a forma que o motor lê.
   // A tradução mora aqui, num lugar só: a tela não deveria precisar conhecer o
   // formato dos degraus para dizer "este número já está aquecido".
+  const { number_activated_at, ...demaisCampos } = camposDiretos;
+  const ativacao = ativacaoParaColuna(number_activated_at);
   const knobFields = {
-    ...camposDiretos,
+    ...demaisCampos,
+    ...(ativacao !== undefined ? { number_activated_at: ativacao } : {}),
     ...(skip_warmup !== undefined
       ? { warmup_daily_caps: skip_warmup ? [...WARMUP_PULADO] : null }
       : {}),
@@ -150,7 +154,10 @@ export async function PUT(req: NextRequest): Promise<Response> {
       { onConflict: "organization_id,channel_session_id" },
     );
     if (upErr) {
-      return fail("internal_error", "Falha ao salvar os knobs.", 500, { requestId });
+      return fail("internal_error", "Falha ao salvar os knobs.", 500, {
+        requestId,
+        details: upErr.message,
+      });
     }
   }
 
