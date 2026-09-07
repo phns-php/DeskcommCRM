@@ -62,6 +62,9 @@ describe("last_human_decision no contexto do turno", () => {
     // `in`, não truthiness: ausente e null dizem coisas diferentes.
     expect("last_human_decision" in r.context).toBe(true);
     expect(r.context.last_human_decision).toBeNull();
+    // O turno chama o contato de `lead_id`. Sem `contact_id` o modelo da agenda
+    // copia o valor para o campo errado ou inventa UUID zero.
+    expect(r.context.contact_id).toBe(ENTRADA.leadId);
   });
 
   it("a decisão mais recente chega com ação, sentido e quando", async () => {

@@ -253,6 +253,24 @@ describe("crm_list_appointments", () => {
     expect(params.googleCalendarId).toBe("ana@exemplo.com");
   });
 
+  it("UUID zero do modelo some — não vira recorte de lead inexistente", async () => {
+    vi.mocked(listaAgendamentos).mockResolvedValue({ ok: true, agendamentos: [] });
+    await crmListAppointments.handler(
+      {
+        contact_id: "b1da7081-04aa-4f49-a5a5-7952af149094",
+        lead_id: "00000000-0000-0000-0000-000000000000",
+        owner_user_id: "00000000-0000-0000-0000-000000000000",
+        dia: "2026-09-08",
+      },
+      ctx,
+    );
+    const params = vi.mocked(listaAgendamentos).mock.calls[0]![2];
+    expect(params.contactId).toBe("b1da7081-04aa-4f49-a5a5-7952af149094");
+    expect(params.leadId).toBeNull();
+    expect(params.ownerUserId).toBeNull();
+    expect(params.dia).toBe("2026-09-08");
+  });
+
   it("o recorte chega inteiro à regra, e o limite tem padrão", async () => {
     vi.mocked(listaAgendamentos).mockResolvedValue({ ok: true, agendamentos: [] });
     await crmListAppointments.handler({ contact_id: "22222222-2222-4222-8222-222222222222", dia: "2026-09-01" }, ctx);
@@ -283,6 +301,21 @@ describe("as escritas de agenda", () => {
     expect(crmBookAppointment.description).toMatch(/marcado:\s*false/i);
     expect(crmBookAppointment.description).toMatch(/NÃO invente|nunca diga/i);
     expect(crmBookAppointment.description).toMatch(/notes/);
+  });
+
+  it("contact_id zero não chega no handler — o modelo usa zero como 'não tenho'", async () => {
+    vi.mocked(idDoTipoPorSlug).mockResolvedValue({ id: "t-1", nome: "Consulta" });
+    const r = (await crmBookAppointment.handler(
+      {
+        event_type_slug: "consulta",
+        starts_at: "2026-09-01T14:00:00Z",
+        contact_id: "00000000-0000-0000-0000-000000000000",
+      },
+      ctx,
+    )) as { marcado: boolean; motivo: string; mensagem: string };
+    expect(r.marcado).toBe(false);
+    expect(r.motivo).toBe("contact_id_ausente");
+    expect(handlers.marcarAgendamentoHandler).not.toHaveBeenCalled();
   });
 
   it("⚠️ ApiError do handler vira RESPOSTA — exceção mataria o turno", async () => {

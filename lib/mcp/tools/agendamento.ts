@@ -32,11 +32,12 @@ import {
 } from "@/app/api/v1/agenda/agendamentos/_handler";
 import { ApiError } from "@/lib/api/types";
 import { SITUACOES_DO_AGENDAMENTO } from "@/lib/agenda/tipos";
+import { uuidInformado } from "@/lib/agenda/uuid-informado";
 import type { McpContext, McpToolDefinition } from "@/lib/mcp/types";
 
 /** Binding da tela vence o que o modelo inventar — um agente, um calendário. */
 function donoDaAgenda(ctx: McpContext, informado?: string): string | undefined {
-  return ctx.agendaDoAgente?.ownerUserId ?? informado;
+  return ctx.agendaDoAgente?.ownerUserId ?? uuidInformado(informado);
 }
 
 /** Teto do horizonte pedido — espelha o da rota, e o excesso é erro de chamada. */
@@ -173,15 +174,17 @@ export const crmListAppointments: McpToolDefinition<typeof listarShape> = {
     "decidimos voltar a falar, sem nada combinado com o cliente. Aqui é o que foi combinado " +
     "COM ele e ocupa o tempo de um atendente. O mesmo cliente pode ter os dois. " +
     "USE ANTES DE MARCAR e antes de cobrar: cliente que já tem consulta marcada não deve " +
-    "receber oferta de horário como se não tivesse, nem ser cobrado como se estivesse parado.",
+    "receber oferta de horário como se não tivesse, nem ser cobrado como se estivesse parado. " +
+    "O identificador do cliente no contexto do turno vai em `contact_id`. " +
+    "NUNCA invente UUID (nem `00000000-…`): se não tiver lead ou responsável, OMITA o campo.",
   inputSchema: listarShape,
   category: "read",
   requiresRole: "agent",
   requiresScope: "mcp:read",
   handler: async (input, ctx) => {
     const r = await listaAgendamentos(ctx.supabase, ctx.organizationId, {
-      contactId: input.contact_id ?? null,
-      leadId: input.lead_id ?? null,
+      contactId: uuidInformado(input.contact_id) ?? null,
+      leadId: uuidInformado(input.lead_id) ?? null,
       dia: input.dia ?? null,
       ownerUserId: donoDaAgenda(ctx, input.owner_user_id) ?? null,
       googleCalendarId: ctx.agendaDoAgente?.externalCalendarId ?? null,
@@ -306,13 +309,22 @@ export const crmBookAppointment: McpToolDefinition<typeof marcarShape> = {
           mensagem: `não existe atendimento chamado "${input.event_type_slug}". Pergunte que tipo de atendimento a pessoa quer.`,
         };
       }
+      const contactId = uuidInformado(input.contact_id);
+      if (!contactId) {
+        return {
+          marcado: false,
+          motivo: "contact_id_ausente",
+          mensagem:
+            "preciso do identificador do cliente. Use o `contact_id` do contexto do turno — não invente UUID e não use zero.",
+        };
+      }
       const r = await marcarAgendamentoHandler(
         ctx.supabase,
         { organization_id: ctx.organizationId, actor: ctx.actor, requestId: ctx.requestId },
         {
           event_type_id: tipo.id,
           starts_at: input.starts_at,
-          contact_id: input.contact_id,
+          contact_id: contactId,
           ...(donoDaAgenda(ctx, input.owner_user_id)
             ? { owner_user_id: donoDaAgenda(ctx, input.owner_user_id) }
             : {}),
