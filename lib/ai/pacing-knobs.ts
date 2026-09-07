@@ -78,6 +78,26 @@ export const pacingKnobsUpdateSchema = z
 
 export type PacingKnobsUpdate = z.infer<typeof pacingKnobsUpdateSchema>;
 
+/**
+ * O que a tela manda vs o que a coluna aceita.
+ *
+ * `channel_knobs.number_activated_at` é `NOT NULL DEFAULT now()`. A ficha
+ * manda `null` quando o campo de data está vazio ("trate como recém-criado").
+ * Gravar esse null é 23502 e a rota devolve 500 "Falha ao salvar os knobs."
+ * — o caminho que a instalação nova toma no primeiro Salvar, porque ainda
+ * não há linha e a data nasce em branco.
+ *
+ * `null` vira "agora" (idade 0), que é o mesmo desfecho que o motor já aplica
+ * quando a linha não existe. `undefined` = o PATCH não falou da data.
+ */
+export function ativacaoParaColuna(
+  iso: string | null | undefined,
+): string | undefined {
+  if (iso === undefined) return undefined;
+  if (iso === null) return new Date().toISOString();
+  return iso;
+}
+
 export interface ChannelKnobsRow {
   throttle_ms: number | null;
   jitter_max_ms: number | null;

@@ -12,6 +12,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   WARMUP_PULADO,
+  ativacaoParaColuna,
   idadeEmDias,
   knobsView,
   pacingKnobsUpdateSchema,
@@ -55,6 +56,16 @@ describe("contrato da API — os campos que faltavam", () => {
       number_activated_at: null,
     });
     expect(r.success).toBe(true);
+  });
+
+  it("null da tela não vai à coluna NOT NULL — vira instante (idade 0)", () => {
+    // O PUT que a ficha manda no primeiro salvar de uma VPS nova: data em
+    // branco. Sem esta tradução o Postgres recusa 23502 e a tela diz
+    // "Falha ao salvar os knobs."
+    expect(ativacaoParaColuna(null)).toEqual(expect.stringMatching(/^\d{4}-/));
+    expect(ativacaoParaColuna(null)).not.toBeNull();
+    expect(ativacaoParaColuna(undefined)).toBeUndefined();
+    expect(ativacaoParaColuna("2026-04-29T12:00:00.000Z")).toBe("2026-04-29T12:00:00.000Z");
   });
 
   it("aceita a decisão de pular o aquecimento", () => {
