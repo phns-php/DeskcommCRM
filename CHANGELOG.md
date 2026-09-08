@@ -8,6 +8,35 @@ Se você roda o DeskcommCRM numa VPS, **leia a seção da versão para a qual es
 
 ## [Não lançado]
 
+## [1.15.0] — 2026-09-08
+
+### Adicionado
+
+- **Admin de plataforma redefine a senha de um usuário** Na ficha do usuário em Admin › Usuários, o botão Editar senha abre um modal
+  para gravar uma senha nova. A troca entra em vigor na hora; o valor digitado
+  não aparece no registro de auditoria.
+
+- **Agente de agenda marca, remarca e desmarca sozinho pelo WhatsApp** O atendimento por WhatsApp passa a gravar o compromisso na agenda da equipe
+  — o mesmo caminho da tela — e só abre caso humano quando a ferramenta
+  impede o próximo passo. Pedir horário, aceitar uma vaga, remarcar ou
+  desmarcar não exige mais alguém da fila para confirmar.
+
+### Corrigido
+
+- **Agente de agenda confirma o compromisso no cliente da conversa** Depois de marcar pelo WhatsApp, a listagem volta a achar o horário daquela
+  pessoa — o identificador sai do turno, não de um UUID que o modelo copia.
+
+- **Agente de agenda volta a enxergar o compromisso do cliente** Pedir horário ou remarcar falhava quando o modelo mandava UUID zero, o
+  id do contato como se fosse o do negócio, ou o contato como responsável
+  da agenda — a coleta lia a jornada de quem não atende e o cliente ouvia
+  que a consulta automática não existia. A listagem ignora o zero, trata
+  aquele id como contato, e o dono da agenda só vem do binding ou do tipo.
+
+- **Proteção de envio volta a salvar na instalação nova** Salvar horário, aquecimento ou teto diário em Conexões falhava com 500
+  quando a data de uso do número estava em branco — o caso de toda conexão
+  recém-pareada. O valor vazio agora grava como número recém-ativado, que é
+  o que a tela já prometia.
+
 ## [1.14.0] — 2026-09-03
 
 ### Adicionado
@@ -1614,7 +1643,8 @@ Primeira versão marcada do DeskcommCRM. O projeto vinha sendo desenvolvido publ
 
 - **Node 22 é obrigatório para desenvolvimento.** A suíte de invariantes instancia o cliente do Supabase, que exige o `WebSocket` global — nativo apenas a partir do Node 22. Isso não afeta quem apenas hospeda: a VPS roda a imagem pronta.
 
-[Não lançado]: https://github.com/phns-php/DeskcommCRM/compare/v1.14.0...HEAD
+[Não lançado]: https://github.com/phns-php/DeskcommCRM/compare/v1.15.0...HEAD
+[1.15.0]: https://github.com/phns-php/DeskcommCRM/compare/v1.14.0...v1.15.0
 [1.14.0]: https://github.com/phns-php/DeskcommCRM/compare/v1.13.0...v1.14.0
 [1.13.0]: https://github.com/phns-php/DeskcommCRM/compare/v1.12.0...v1.13.0
 [1.12.0]: https://github.com/phns-php/DeskcommCRM/compare/v1.11.1...v1.12.0
