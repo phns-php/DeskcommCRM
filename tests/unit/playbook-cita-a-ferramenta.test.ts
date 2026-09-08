@@ -189,4 +189,15 @@ describe("playbook semeado cita a ferramenta que fala da mesma ação", () => {
         "⚠️ Citar não é concordar: este gate pega a OMISSÃO, não a contradição.",
     ).toEqual([]);
   });
+
+  it("o playbook de agendamento não manda prometer a equipe sem caso", () => {
+    // A 0191 citava as tools e, na mesma janela, mandava "avise que alguém da
+    // equipe confirma". O modelo copiava a frase para o blocker do caso. A v3
+    // só promete humano DEPOIS de open_human_case.
+    const corpo = corpos.get("agendamento");
+    expect(corpo).toBeTruthy();
+    expect(corpo).not.toMatch(/avise que alguém da equipe confirma/i);
+    expect(corpo).toMatch(/open_human_case/);
+    expect(corpo).toMatch(/owner_user_id/);
+  });
 });

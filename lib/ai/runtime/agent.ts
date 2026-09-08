@@ -449,6 +449,7 @@ export async function runAgent(input: RunAgentInput): Promise<RunAgentResult> {
       requestId: run.id,
       supabase: admin,
       agendaDoAgente,
+      contactId: run.contact_id,
     };
     const handoffSignal: RuntimeHandoffSignal = { triggered: false };
     const tools = pickToolsFromMcp({

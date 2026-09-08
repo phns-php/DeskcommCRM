@@ -238,7 +238,7 @@ describe("a recusa para o cliente diz o que FAZER, não só o que não dá", () 
     // horário, ou encerrar sem caminho. A recusa precisa fechar as três.
     expect(RECUSA_PARA_O_CLIENTE).toMatch(/não ofereça horários/i);
     expect(RECUSA_PARA_O_CLIENTE).toMatch(/não diga que está lotado/i);
-    expect(RECUSA_PARA_O_CLIENTE).toMatch(/alguém da equipe/i);
+    expect(RECUSA_PARA_O_CLIENTE).toMatch(/caso humano/i);
   });
 
   it("é a MESMA frase que a leitura devolve — uma fonte, não uma cópia por consumidor", () => {

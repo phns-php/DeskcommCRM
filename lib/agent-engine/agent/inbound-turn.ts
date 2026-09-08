@@ -2439,7 +2439,12 @@ async function executarTurnoDoAgente(
       if (catalogoEntregue.length > 0) {
         runLog.info('capacidades de catálogo entregues ao operador', { entregues: catalogoEntregue });
       }
-      const mcp = await buildMcpTurnTools(deps.crmCfg, { organizationId: tenantId, jobId: job.id }, configDoTurno, runLog);
+      const mcp = await buildMcpTurnTools(
+        deps.crmCfg,
+        { organizationId: tenantId, jobId: job.id, contactId: leadId },
+        configDoTurno,
+        runLog,
+      );
       if (mcp !== null) {
         mcpCleanup = mcp.cleanup;
         for (const [name, mcpTool] of Object.entries(mcp.tools)) {

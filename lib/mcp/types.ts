@@ -30,6 +30,12 @@ export interface McpContext {
    * Ausente = comportamento antigo (dono do tipo / o que o modelo mandar).
    */
   agendaDoAgente?: AgendaDoAgenteNoContexto | null;
+  /**
+   * Quem está do outro lado DESTE turno (WhatsApp = `job.contact_id` /
+   * `ai_agent_runs.contact_id`). Fonte confiável — nunca o body da tool.
+   * Ausente no MCP HTTP solto: aí o modelo precisa mandar `contact_id`.
+   */
+  contactId?: string | null;
 }
 
 export type McpToolCategory = "read" | "write" | "handoff";

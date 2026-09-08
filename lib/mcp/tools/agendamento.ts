@@ -33,11 +33,19 @@ import {
 import { ApiError } from "@/lib/api/types";
 import { SITUACOES_DO_AGENDAMENTO } from "@/lib/agenda/tipos";
 import { uuidInformado } from "@/lib/agenda/uuid-informado";
+import { clienteDoTurno } from "@/lib/mcp/cliente-do-turno";
 import type { McpContext, McpToolDefinition } from "@/lib/mcp/types";
 
-/** Binding da tela vence o que o modelo inventar — um agente, um calendário. */
-function donoDaAgenda(ctx: McpContext, informado?: string): string | undefined {
-  return ctx.agendaDoAgente?.ownerUserId ?? uuidInformado(informado);
+/**
+ * Quem atende. Só o binding da tela (ou, sem ele, o dono do tipo).
+ *
+ * Medido em 2026-09-07: o modelo mandou o UUID do CONTATO em `owner_user_id`.
+ * A coleta leu `attendant_availability` dessa pessoa — que não atende — e
+ * devolveu `publicou_horarios: false`. O cliente ouviu "agenda não disponível
+ * para consulta automática". O zero já era ignorado; o contato é UUID real.
+ */
+function donoDaAgenda(ctx: McpContext): string | undefined {
+  return ctx.agendaDoAgente?.ownerUserId;
 }
 
 /** Teto do horizonte pedido — espelha o da rota, e o excesso é erro de chamada. */
@@ -77,9 +85,10 @@ export const crmFindFreeSlots: McpToolDefinition<typeof horariosLivresShape> = {
     "SE VOCÊ NÃO SABE QUE DIA É HOJE, USE `dias_a_frente` — não tente montar `de`/`ate`. " +
     "Lista vazia NÃO é erro e NÃO significa que a agenda está cheia: leia `publicou_horarios`. " +
     "Se ele for false, o atendente ainda não publicou os horários dele — não invente horários e " +
-    "não diga que está lotado; avise que alguém da equipe confirma. " +
+    "não diga que está lotado; abra um caso humano com o motivo e só então avise a pessoa. " +
     "Se `fuso_suposto` for true, o fuso da agenda não foi escolhido por ninguém, veio do padrão: " +
-    "ofereça o horário pedindo confirmação em vez de afirmar.",
+    "ofereça o horário pedindo confirmação em vez de afirmar. " +
+    "NÃO envie `owner_user_id`: o responsável já está no tipo de atendimento. Mandar o id do cliente ali consulta a agenda de quem não atende.",
   inputSchema: horariosLivresShape,
   category: "read",
   requiresRole: "agent",
@@ -108,7 +117,7 @@ export const crmFindFreeSlots: McpToolDefinition<typeof horariosLivresShape> = {
 
     const consulta = await horariosLivresDaOrg(ctx.supabase, ctx.organizationId, {
       eventTypeSlug: input.event_type_slug,
-      ownerUserId: donoDaAgenda(ctx, input.owner_user_id) ?? null,
+      ownerUserId: donoDaAgenda(ctx) ?? null,
       externalCalendarId: ctx.agendaDoAgente?.externalCalendarId ?? null,
       de,
       ate,
@@ -175,20 +184,31 @@ export const crmListAppointments: McpToolDefinition<typeof listarShape> = {
     "COM ele e ocupa o tempo de um atendente. O mesmo cliente pode ter os dois. " +
     "USE ANTES DE MARCAR e antes de cobrar: cliente que já tem consulta marcada não deve " +
     "receber oferta de horário como se não tivesse, nem ser cobrado como se estivesse parado. " +
-    "O identificador do cliente no contexto do turno vai em `contact_id`. " +
+    "No WhatsApp OMITA `contact_id`: o cliente já é o da conversa. Mandar outro UUID lista a agenda de outra pessoa. " +
+    "A lista traz `contato_nome` — use o nome para confirmar com a pessoa, nunca o UUID. " +
+    "NÃO envie `situacao`: a lista já traz o estado de cada compromisso. Mandar pending esconde o que já está confirmado. " +
     "NUNCA invente UUID (nem `00000000-…`): se não tiver lead ou responsável, OMITA o campo.",
   inputSchema: listarShape,
   category: "read",
   requiresRole: "agent",
   requiresScope: "mcp:read",
   handler: async (input, ctx) => {
+    const contactId = clienteDoTurno(ctx, input.contact_id) ?? null;
+    // Recorte DE CLIENTE e recorte DE CALENDÁRIO não combinam: o compromisso
+    // recém-marcado ainda pode estar sem `google_calendar_id` (destino nulo, sync
+    // atrasado). Filtrar os dois esconde o que a ferramenta existe para mostrar.
+    const recorteDoCliente = Boolean(contactId);
     const r = await listaAgendamentos(ctx.supabase, ctx.organizationId, {
-      contactId: uuidInformado(input.contact_id) ?? null,
-      leadId: uuidInformado(input.lead_id) ?? null,
+      contactId,
+      leadId: recorteDoCliente ? null : (uuidInformado(input.lead_id) ?? null),
       dia: input.dia ?? null,
-      ownerUserId: donoDaAgenda(ctx, input.owner_user_id) ?? null,
-      googleCalendarId: ctx.agendaDoAgente?.externalCalendarId ?? null,
-      situacao: input.situacao ?? null,
+      ownerUserId: recorteDoCliente ? null : (donoDaAgenda(ctx) ?? null),
+      googleCalendarId: recorteDoCliente
+        ? null
+        : (ctx.agendaDoAgente?.externalCalendarId ?? null),
+      // O modelo manda `pending` por default e esconde compromisso `confirmed` —
+      // medido em 2026-09-08. A lista já devolve a situação de cada um.
+      situacao: null,
       limite: input.limite ?? 20,
     });
 
@@ -206,6 +226,7 @@ export const crmListAppointments: McpToolDefinition<typeof listarShape> = {
         fuso: a.fuso,
         situacao: a.situacao,
         contato_id: a.contatoId,
+        contato_nome: a.contatoNome,
         atendente_id: a.donoId,
       })),
     };
@@ -233,15 +254,15 @@ const ENSINO_POR_CODIGO: Record<string, string> = {
   agenda_fora_da_jornada:
     "esse horário está fora do expediente do atendente. Chame `crm_find_free_slots` e ofereça um dos que ele devolver — não insista no horário pedido.",
   agenda_tipo_desativado:
-    "esse tipo de atendimento não está sendo agendado agora. Pergunte que outro atendimento serve, ou avise que alguém da equipe confirma.",
+    "esse tipo de atendimento não está sendo agendado agora. Pergunte que outro atendimento serve. Se não houver alternativa, abra um caso humano com o motivo e só então avise a pessoa.",
   agenda_sem_responsavel:
-    "esse atendimento ainda não tem responsável definido. Não invente horários: avise que alguém da equipe confirma.",
+    "esse atendimento ainda não tem responsável definido. Não invente horários: abra um caso humano com o motivo e só então avise a pessoa.",
   agenda_disponibilidade_invalida:
-    "não consigo ler a agenda desse atendente agora. Não ofereça horários e não diga que está sem vaga — avise que alguém da equipe confirma.",
+    "não consigo ler a agenda desse atendente agora. Não ofereça horários e não diga que está sem vaga — abra um caso humano com o motivo e só então avise a pessoa.",
   agenda_ja_cancelado:
     "esse compromisso já estava desmarcado. Não é erro: siga sem desmarcar de novo.",
   not_found: "não encontrei esse compromisso. Confirme com `crm_list_appointments` antes de tentar de novo.",
-  internal_error: "não consegui completar agora. Avise que alguém da equipe confirma, e não repita a tentativa.",
+  internal_error: "não consegui completar agora. Abra um caso humano com o motivo, avise a pessoa, e não repita a tentativa.",
 };
 
 /** Captura o `ApiError` do handler e devolve recusa de NEGÓCIO, nunca exceção. */
@@ -258,7 +279,7 @@ async function semDerrubarOTurno<T>(
       motivo: e.code,
       mensagem:
         ENSINO_POR_CODIGO[e.code] ??
-        "não consegui completar agora. Avise que alguém da equipe confirma o horário.",
+        "não consegui completar agora. Abra um caso humano com o motivo e só então avise a pessoa.",
     };
   }
 }
@@ -266,7 +287,11 @@ async function semDerrubarOTurno<T>(
 const marcarShape = {
   event_type_slug: z.string().min(1).describe("o identificador legível do tipo de atendimento"),
   starts_at: z.string().datetime({ offset: true }).describe("o instante exato do início, vindo de `crm_find_free_slots`"),
-  contact_id: z.string().uuid().describe("quem vai ser atendido"),
+  contact_id: z
+    .string()
+    .uuid()
+    .optional()
+    .describe("quem vai ser atendido. No WhatsApp omita: já é o da conversa."),
   owner_user_id: z.string().uuid().optional(),
   title: z.string().min(1).max(200).optional(),
   notes: z
@@ -293,6 +318,8 @@ export const crmBookAppointment: McpToolDefinition<typeof marcarShape> = {
     "Se vier `marcado: false`, NÃO invente confirmação: leia `mensagem`, siga o que ela pede " +
     "(em geral consultar horários de novo) e avise o cliente com honestidade — " +
     "nunca diga 'pronto, está marcado' quando a ferramenta recusou. " +
+    "No WhatsApp OMITA `contact_id`: o cliente já é o da conversa. " +
+    "A resposta traz `compromisso.contato_id` do mesmo cliente — confirme com o nome da conversa, não peça o UUID de novo. " +
     "Preencha `notes` com o motivo do atendimento (o que a pessoa precisa, em uma frase): " +
     "isso vira a descrição na agenda da equipe. Sem `notes` o card só mostra o tipo.",
   inputSchema: marcarShape,
@@ -309,13 +336,13 @@ export const crmBookAppointment: McpToolDefinition<typeof marcarShape> = {
           mensagem: `não existe atendimento chamado "${input.event_type_slug}". Pergunte que tipo de atendimento a pessoa quer.`,
         };
       }
-      const contactId = uuidInformado(input.contact_id);
+      const contactId = clienteDoTurno(ctx, input.contact_id);
       if (!contactId) {
         return {
           marcado: false,
           motivo: "contact_id_ausente",
           mensagem:
-            "preciso do identificador do cliente. Use o `contact_id` do contexto do turno — não invente UUID e não use zero.",
+            "preciso do identificador do cliente. No WhatsApp ele já vem do turno — omita o campo. Fora do WhatsApp, use o `contact_id` do contexto. Não invente UUID e não use zero.",
         };
       }
       const r = await marcarAgendamentoHandler(
@@ -325,9 +352,7 @@ export const crmBookAppointment: McpToolDefinition<typeof marcarShape> = {
           event_type_id: tipo.id,
           starts_at: input.starts_at,
           contact_id: contactId,
-          ...(donoDaAgenda(ctx, input.owner_user_id)
-            ? { owner_user_id: donoDaAgenda(ctx, input.owner_user_id) }
-            : {}),
+          ...(donoDaAgenda(ctx) ? { owner_user_id: donoDaAgenda(ctx) } : {}),
           ...(input.title ? { title: input.title } : {}),
           ...(input.notes ? { notes: input.notes } : {}),
           ...(ctx.agendaDoAgente
@@ -338,7 +363,13 @@ export const crmBookAppointment: McpToolDefinition<typeof marcarShape> = {
             : {}),
         },
       );
-      return { marcado: true, compromisso: r };
+      return {
+        marcado: true,
+        compromisso: {
+          ...(r as Record<string, unknown>),
+          contato_id: contactId,
+        },
+      };
     }),
 };
 

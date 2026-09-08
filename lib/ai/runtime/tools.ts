@@ -23,6 +23,7 @@ import { allTools, getToolByName } from "@/lib/mcp/tools";
 import { catalogEntry } from "@/lib/mcp/tools/catalog";
 import { recusaDeCapacidadeParaOModelo } from "@/lib/mcp/recusa-para-o-modelo";
 import type { McpContext, McpToolDefinition } from "@/lib/mcp/types";
+import { argumentosComClienteDoTurno } from "@/lib/mcp/cliente-do-turno";
 import { resolveActiveLeadForContact, type LeadCandidate } from "@/lib/leads/active-lead";
 import { podeChamarFerramenta, recusaParaOModelo } from "@/lib/leads/escopo-de-funil";
 
@@ -68,7 +69,11 @@ function wrapMcpTool(
     inputSchema,
     execute: async (args: unknown) => {
       const startedAt = Date.now();
-      const argsRecord = (args ?? {}) as Record<string, unknown>;
+      const argsRecord = argumentosComClienteDoTurno(
+        def.inputSchema,
+        input.ctx,
+        (args ?? {}) as Record<string, unknown>,
+      );
       try {
         ensureScope(input.auth.scopes, def.requiresScope);
         ensureRole(input.auth.role, def.requiresRole);

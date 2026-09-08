@@ -195,6 +195,22 @@ describe("crm_find_free_slots", () => {
     expect(params.ownerUserId).toBe("11111111-1111-4111-8111-111111111111");
     expect(params.externalCalendarId).toBe("ana@exemplo.com");
   });
+
+  it("sem binding, o owner que o modelo inventou some — senão a coleta lê a jornada do contato", async () => {
+    // Turno real (2026-09-07 23:50): contact_id foi parar em owner_user_id.
+    // attendant_availability do contato não existe → publicou_horarios false →
+    // "agenda não disponível para consulta automática".
+    respondeCom(SUCESSO);
+    await crmFindFreeSlots.handler(
+      {
+        event_type_slug: "atendimento",
+        owner_user_id: "b1da7081-04aa-4f49-a5a5-7952af149094",
+      },
+      ctx,
+    );
+    const params = vi.mocked(horariosLivresDaOrg).mock.calls[0]![2];
+    expect(params.ownerUserId).toBeNull();
+  });
 });
 
 
@@ -253,6 +269,74 @@ describe("crm_list_appointments", () => {
     expect(params.googleCalendarId).toBe("ana@exemplo.com");
   });
 
+  it("o contato do turno preenche a lista mesmo o modelo omitindo contact_id", async () => {
+    vi.mocked(listaAgendamentos).mockResolvedValue({ ok: true, agendamentos: [] });
+    const contato = "b1da7081-04aa-4f49-a5a5-7952af149094";
+    await crmListAppointments.handler({}, { ...ctx, contactId: contato });
+    const params = vi.mocked(listaAgendamentos).mock.calls[0]![2];
+    expect(params.contactId).toBe(contato);
+  });
+
+  it("recorte de cliente NÃO soma o calendário Google — senão o recém-marcado some", async () => {
+    vi.mocked(listaAgendamentos).mockResolvedValue({ ok: true, agendamentos: [] });
+    const contato = "b1da7081-04aa-4f49-a5a5-7952af149094";
+    await crmListAppointments.handler(
+      { contact_id: contato },
+      {
+        ...ctx,
+        agendaDoAgente: {
+          ownerUserId: "11111111-1111-4111-8111-111111111111",
+          externalCalendarId: "ana@exemplo.com",
+          connectionId: "conn-1",
+        },
+      },
+    );
+    const params = vi.mocked(listaAgendamentos).mock.calls[0]![2];
+    expect(params.contactId).toBe(contato);
+    expect(params.googleCalendarId).toBeNull();
+    expect(params.ownerUserId).toBeNull();
+  });
+
+  it("o UUID do turno vence o contact_id que o modelo inventou", async () => {
+    vi.mocked(listaAgendamentos).mockResolvedValue({ ok: true, agendamentos: [] });
+    const doTurno = "b1da7081-04aa-4f49-a5a5-7952af149094";
+    await crmListAppointments.handler(
+      { contact_id: "11111111-1111-4111-8111-111111111111" },
+      { ...ctx, contactId: doTurno },
+    );
+    const params = vi.mocked(listaAgendamentos).mock.calls[0]![2];
+    expect(params.contactId).toBe(doTurno);
+  });
+
+  it("a lista devolve o nome do cliente — UUID sozinho não confirma a conversa", async () => {
+    vi.mocked(listaAgendamentos).mockResolvedValue({
+      ok: true,
+      agendamentos: [
+        {
+          id: "a-1",
+          titulo: "Atendimento - Maria",
+          iniciaEm: "2026-09-10T14:00:00Z",
+          terminaEm: "2026-09-10T14:40:00Z",
+          fuso: "America/Manaus",
+          situacao: "confirmed",
+          donoId: "d-1",
+          contatoId: "b1da7081-04aa-4f49-a5a5-7952af149094",
+          contatoNome: "Maria",
+          contatoTelefone: null,
+          contatoEmail: null,
+          origem: "mcp",
+          descricao: null,
+        },
+      ],
+    });
+    const r = (await crmListAppointments.handler(
+      { contact_id: "b1da7081-04aa-4f49-a5a5-7952af149094" },
+      ctx,
+    )) as { compromissos: Array<{ contato_nome: string; contato_id: string }> };
+    expect(r.compromissos[0]!.contato_nome).toBe("Maria");
+    expect(r.compromissos[0]!.contato_id).toBe("b1da7081-04aa-4f49-a5a5-7952af149094");
+  });
+
   it("UUID zero do modelo some — não vira recorte de lead inexistente", async () => {
     vi.mocked(listaAgendamentos).mockResolvedValue({ ok: true, agendamentos: [] });
     await crmListAppointments.handler(
@@ -269,6 +353,28 @@ describe("crm_list_appointments", () => {
     expect(params.leadId).toBeNull();
     expect(params.ownerUserId).toBeNull();
     expect(params.dia).toBe("2026-09-08");
+  });
+
+  it("situacao pending do modelo some — senão esconde o compromisso confirmed", async () => {
+    vi.mocked(listaAgendamentos).mockResolvedValue({ ok: true, agendamentos: [] });
+    await crmListAppointments.handler(
+      {
+        contact_id: "b1da7081-04aa-4f49-a5a5-7952af149094",
+        situacao: "pending",
+      },
+      ctx,
+    );
+    const params = vi.mocked(listaAgendamentos).mock.calls[0]![2];
+    expect(params.situacao).toBeNull();
+  });
+
+  it("owner_user_id igual ao contato não recorta a lista pelo atendente errado", async () => {
+    vi.mocked(listaAgendamentos).mockResolvedValue({ ok: true, agendamentos: [] });
+    const contato = "b1da7081-04aa-4f49-a5a5-7952af149094";
+    await crmListAppointments.handler({ contact_id: contato, owner_user_id: contato }, ctx);
+    const params = vi.mocked(listaAgendamentos).mock.calls[0]![2];
+    expect(params.contactId).toBe(contato);
+    expect(params.ownerUserId).toBeNull();
   });
 
   it("o recorte chega inteiro à regra, e o limite tem padrão", async () => {
@@ -425,5 +531,21 @@ describe("as escritas de agenda", () => {
     expect(input.owner_user_id).toBe("11111111-1111-4111-8111-111111111111");
     expect(input.google_calendar_id).toBe("ana@exemplo.com");
     expect(input.google_connection_id).toBe("conn-1");
+  });
+
+  it("marcar usa o contato do turno quando o modelo omite contact_id", async () => {
+    vi.mocked(idDoTipoPorSlug).mockResolvedValue({ id: "t-1", nome: "Consulta" });
+    vi.mocked(handlers.marcarAgendamentoHandler).mockResolvedValue({
+      id: "a-1",
+      starts_at: "2026-09-01T14:00:00Z",
+    });
+    const contato = "b1da7081-04aa-4f49-a5a5-7952af149094";
+    const r = (await crmBookAppointment.handler(
+      { event_type_slug: "consulta", starts_at: "2026-09-01T14:00:00Z" },
+      { ...ctx, contactId: contato },
+    )) as { marcado: boolean; compromisso: { id: string; contato_id: string } };
+    expect(r.marcado).toBe(true);
+    expect(r.compromisso.contato_id).toBe(contato);
+    expect(vi.mocked(handlers.marcarAgendamentoHandler).mock.calls[0]![2].contact_id).toBe(contato);
   });
 });
