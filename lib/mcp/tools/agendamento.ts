@@ -35,9 +35,16 @@ import { SITUACOES_DO_AGENDAMENTO } from "@/lib/agenda/tipos";
 import { uuidInformado } from "@/lib/agenda/uuid-informado";
 import type { McpContext, McpToolDefinition } from "@/lib/mcp/types";
 
-/** Binding da tela vence o que o modelo inventar — um agente, um calendário. */
-function donoDaAgenda(ctx: McpContext, informado?: string): string | undefined {
-  return ctx.agendaDoAgente?.ownerUserId ?? uuidInformado(informado);
+/**
+ * Quem atende. Só o binding da tela (ou, sem ele, o dono do tipo).
+ *
+ * Medido em 2026-09-07: o modelo mandou o UUID do CONTATO em `owner_user_id`.
+ * A coleta leu `attendant_availability` dessa pessoa — que não atende — e
+ * devolveu `publicou_horarios: false`. O cliente ouviu "agenda não disponível
+ * para consulta automática". O zero já era ignorado; o contato é UUID real.
+ */
+function donoDaAgenda(ctx: McpContext): string | undefined {
+  return ctx.agendaDoAgente?.ownerUserId;
 }
 
 /** Teto do horizonte pedido — espelha o da rota, e o excesso é erro de chamada. */
@@ -79,7 +86,8 @@ export const crmFindFreeSlots: McpToolDefinition<typeof horariosLivresShape> = {
     "Se ele for false, o atendente ainda não publicou os horários dele — não invente horários e " +
     "não diga que está lotado; avise que alguém da equipe confirma. " +
     "Se `fuso_suposto` for true, o fuso da agenda não foi escolhido por ninguém, veio do padrão: " +
-    "ofereça o horário pedindo confirmação em vez de afirmar.",
+    "ofereça o horário pedindo confirmação em vez de afirmar. " +
+    "NÃO envie `owner_user_id`: o responsável já está no tipo de atendimento. Mandar o id do cliente ali consulta a agenda de quem não atende.",
   inputSchema: horariosLivresShape,
   category: "read",
   requiresRole: "agent",
@@ -108,7 +116,7 @@ export const crmFindFreeSlots: McpToolDefinition<typeof horariosLivresShape> = {
 
     const consulta = await horariosLivresDaOrg(ctx.supabase, ctx.organizationId, {
       eventTypeSlug: input.event_type_slug,
-      ownerUserId: donoDaAgenda(ctx, input.owner_user_id) ?? null,
+      ownerUserId: donoDaAgenda(ctx) ?? null,
       externalCalendarId: ctx.agendaDoAgente?.externalCalendarId ?? null,
       de,
       ate,
@@ -186,7 +194,7 @@ export const crmListAppointments: McpToolDefinition<typeof listarShape> = {
       contactId: uuidInformado(input.contact_id) ?? null,
       leadId: uuidInformado(input.lead_id) ?? null,
       dia: input.dia ?? null,
-      ownerUserId: donoDaAgenda(ctx, input.owner_user_id) ?? null,
+      ownerUserId: donoDaAgenda(ctx) ?? null,
       googleCalendarId: ctx.agendaDoAgente?.externalCalendarId ?? null,
       situacao: input.situacao ?? null,
       limite: input.limite ?? 20,
@@ -325,9 +333,7 @@ export const crmBookAppointment: McpToolDefinition<typeof marcarShape> = {
           event_type_id: tipo.id,
           starts_at: input.starts_at,
           contact_id: contactId,
-          ...(donoDaAgenda(ctx, input.owner_user_id)
-            ? { owner_user_id: donoDaAgenda(ctx, input.owner_user_id) }
-            : {}),
+          ...(donoDaAgenda(ctx) ? { owner_user_id: donoDaAgenda(ctx) } : {}),
           ...(input.title ? { title: input.title } : {}),
           ...(input.notes ? { notes: input.notes } : {}),
           ...(ctx.agendaDoAgente

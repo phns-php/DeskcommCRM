@@ -195,6 +195,22 @@ describe("crm_find_free_slots", () => {
     expect(params.ownerUserId).toBe("11111111-1111-4111-8111-111111111111");
     expect(params.externalCalendarId).toBe("ana@exemplo.com");
   });
+
+  it("sem binding, o owner que o modelo inventou some — senão a coleta lê a jornada do contato", async () => {
+    // Turno real (2026-09-07 23:50): contact_id foi parar em owner_user_id.
+    // attendant_availability do contato não existe → publicou_horarios false →
+    // "agenda não disponível para consulta automática".
+    respondeCom(SUCESSO);
+    await crmFindFreeSlots.handler(
+      {
+        event_type_slug: "atendimento",
+        owner_user_id: "b1da7081-04aa-4f49-a5a5-7952af149094",
+      },
+      ctx,
+    );
+    const params = vi.mocked(horariosLivresDaOrg).mock.calls[0]![2];
+    expect(params.ownerUserId).toBeNull();
+  });
 });
 
 
@@ -269,6 +285,15 @@ describe("crm_list_appointments", () => {
     expect(params.leadId).toBeNull();
     expect(params.ownerUserId).toBeNull();
     expect(params.dia).toBe("2026-09-08");
+  });
+
+  it("owner_user_id igual ao contato não recorta a lista pelo atendente errado", async () => {
+    vi.mocked(listaAgendamentos).mockResolvedValue({ ok: true, agendamentos: [] });
+    const contato = "b1da7081-04aa-4f49-a5a5-7952af149094";
+    await crmListAppointments.handler({ contact_id: contato, owner_user_id: contato }, ctx);
+    const params = vi.mocked(listaAgendamentos).mock.calls[0]![2];
+    expect(params.contactId).toBe(contato);
+    expect(params.ownerUserId).toBeNull();
   });
 
   it("o recorte chega inteiro à regra, e o limite tem padrão", async () => {
