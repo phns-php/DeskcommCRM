@@ -111,3 +111,7 @@ evidence/.sonda-score-residuo.json
 
 # QA em VPS: guarda segredo TOTP da conta de teste (repo e publico)
 .qa-vps/
+
+# Dumps locais de skills (podem trazer organization_id do tenant)
+skills/_export/
+scripts/_tmp-*.mjs

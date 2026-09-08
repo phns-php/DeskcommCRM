@@ -120,7 +120,7 @@ function diaISO(instante: Date): string {
 }
 
 const NAO_OFERECA =
-  "Não ofereça horários e não diga que está sem vaga — avise que alguém da equipe confirma o horário.";
+  "Não ofereça horários e não diga que está sem vaga. Se a resposta não der um próximo passo, abra um caso humano com o motivo e só então avise a pessoa.";
 
 export async function horariosLivresDaOrg(
   supabase: SupabaseClient,
@@ -482,7 +482,7 @@ export async function listaAgendamentos(
         ok: false,
         codigo: "erro_interno",
         motivoParaOperador: error.message,
-        motivoParaCliente: "Não consegui consultar os compromissos agora. Avise que alguém da equipe confirma.",
+        motivoParaCliente: "Não consegui consultar os compromissos agora. Se não houver outro passo, abra um caso humano com o motivo e só então avise a pessoa.",
       };
     }
     idsPorLead = (data ?? []).map((l) => String(l.target_id));
@@ -554,7 +554,7 @@ export async function listaAgendamentos(
       ok: false,
       codigo: "erro_interno",
       motivoParaOperador: error.message,
-      motivoParaCliente: "Não consegui consultar os compromissos agora. Avise que alguém da equipe confirma.",
+      motivoParaCliente: "Não consegui consultar os compromissos agora. Se não houver outro passo, abra um caso humano com o motivo e só então avise a pessoa.",
     };
   }
 

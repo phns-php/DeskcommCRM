@@ -46,7 +46,7 @@ export interface McpTurnTools {
 
 export async function buildMcpTurnTools(
   cfg: CrmEdgeConfig,
-  ids: { organizationId: string; jobId: string },
+  ids: { organizationId: string; jobId: string; contactId?: string | null },
   agentConfig: PublishedAgentConfig,
   log: Logger,
 ): Promise<McpTurnTools | null> {
@@ -91,6 +91,10 @@ export async function buildMcpTurnTools(
     requestId: ids.jobId,
     supabase: cfg.supabase,
     agendaDoAgente,
+    // Quem está no WhatsApp. Sem isto o modelo precisa copiar UUID do contexto
+    // para `crm_list_appointments` / `crm_book_appointment` — e, medido, marca
+    // e depois lista vazio porque mandou o id errado ou omitiu.
+    contactId: ids.contactId ?? null,
   };
   const auth: McpAuthResult = {
     organizationId: ids.organizationId,

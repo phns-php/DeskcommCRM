@@ -60,7 +60,8 @@ import type { JornadaDaAgenda } from "./horarios-livres";
  */
 export const RECUSA_PARA_O_CLIENTE =
   "Os horários de atendimento ainda não estão disponíveis. Não ofereça horários " +
-  "e não diga que está lotado — avise que alguém da equipe confirma o horário.";
+  "e não diga que está lotado. Se a ferramenta não der um próximo passo, abra um " +
+  "caso humano com o motivo e só então avise a pessoa.";
 
 export type LeituraDaJornada =
   | {
