@@ -490,6 +490,7 @@ export async function startWorker(
     max_concurrency: env.QUEUE_MAX_CONCURRENCY,
     poll_ocioso_ms: env.QUEUE_POLL_INTERVAL_MS,
     claim_retry_ms: env.QUEUE_CLAIM_RETRY_INTERVAL_MS,
+    inbound_debounce_ms: env.INBOUND_DEBOUNCE_MS,
   });
   // Acima de 10 s a espera ociosa passa do idleTimeoutMillis do pool (10 s, o
   // default do pg): a conexão morre entre uma rodada e outra, e cada consulta ao

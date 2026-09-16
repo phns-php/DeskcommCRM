@@ -41,8 +41,8 @@ linha `agent-engine pronto` do log.
 **Não passe `QUEUE_POLL_INTERVAL_MS` de 10000.** A conexão ociosa do pool expira
 em 10 s; acima disso cada rodada volta a pagar TCP+TLS+startup, e o intervalo
 maior passa a gastar **mais** do que economiza. O worker avisa no boot se você
-cruzar essa linha. Ele também não deve chegar perto de `INBOUND_DEBOUNCE_MS`
-(8000), senão o laço dorme através da janela de coalescência.
+cruzar essa linha. Ele também não deve chegar perto de `INBOUND_DEBOUNCE_MS`,
+senão o laço dorme através da janela de coalescência.
 
 Depois de editar o `.env`:
 

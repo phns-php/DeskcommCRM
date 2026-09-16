@@ -692,7 +692,7 @@ export async function latestCheckpoint(
  * `latestCheckpoint` é a pergunta certa para ABRIR um turno e a errada para
  * PROCESSAR um: entre o fim do turno N e o claim do job do Operador N cabe o turno
  * N+1 inteiro. A fila ordena por `(priority, run_after)`, o job do Operador nasce
- * com `run_after = now()` e o inbound com `now() + INBOUND_DEBOUNCE_MS` (8s) —
+ * com `run_after = now()` e o inbound com `now() + INBOUND_DEBOUNCE_MS` —
  * então uma mensagem que chega enquanto o turno corrente fecha é servida ANTES, e o
  * Operador N acordaria lendo a declaração N+1. O efeito é a mesma promessa
  * executada duas vezes e um aviso aberto duas vezes para uma promessa só.

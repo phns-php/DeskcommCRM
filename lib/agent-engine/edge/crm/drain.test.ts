@@ -1,7 +1,7 @@
 import { expect, it, vi } from 'vitest';
 import type pg from 'pg';
 
-import { drainTick } from './drain';
+import { drainTick, tetoDaRajadaMs } from './drain';
 
 const knobs = { batchSize: 10, intervalMs: 0, idleIntervalMs: 0, debounceMs: 0, reapTimeoutMs: 60000 };
 const log = { info: vi.fn(), warn: vi.fn(), error: vi.fn() } as never;
@@ -133,4 +133,53 @@ it('sem agente MAS com roteador que resolve alguém: turno segue (caminho genér
     knobs, log,
   );
   expect(calls.some((s) => s.includes('job_queue'))).toBe(true);
+});
+
+/**
+ * Debounce deslizante: cada bolha nova tem que ADIAR o job pendente. A versão
+ * anterior só conferia `run_after > now()` e deixava a segunda frase — 10 s
+ * depois da primeira — virar outro turno.
+ */
+const knobsDebounce = { ...knobs, debounceMs: 20_000 };
+
+function poolComDebounce(
+  calls: string[],
+  pendente: { id: string } | null,
+) {
+  const query = vi.fn().mockImplementation((sql: string, _params?: unknown[]) => {
+    calls.push(sql);
+    if (sql.includes('returning e.id')) return { rows: [{ ...event, created_at: new Date().toISOString() }] };
+    if (sql.includes('ai_dispatch_mode')) return { rows: [{ mode: null }] };
+    if (sql.includes('is_group')) return { rows: [{ is_group: false }] };
+    if (sql.includes('tem_agente')) return { rows: [{ tem_agente: true, tem_roteador: false }] };
+    if (sql.includes('media_derived_status')) return { rows: [textoSimples] };
+    if (sql.includes('set run_after')) return { rows: pendente ? [pendente] : [] };
+    return { rows: [] };
+  });
+  return { query } as unknown as pg.Pool;
+}
+
+it('bolha nova ADIA o inbound_turn pendente e NÃO abre segundo job', async () => {
+  const calls: string[] = [];
+  process.env.__ESPERA__ = '0';
+  await drainTick(poolComDebounce(calls, { id: 'job-pendente' }), knobsDebounce, log);
+  const adiar = calls.find((s) => s.includes('set run_after'));
+  expect(adiar).toBeTruthy();
+  expect(adiar).not.toMatch(/run_after\s*>\s*now\(\)/);
+  expect(calls.some((s) => /insert into\s+job_queue/i.test(s))).toBe(false);
+  expect(calls.some((s) => s.includes("status = 'done'"))).toBe(true);
+});
+
+it('sem job pendente: enfileira inbound_turn com debounce', async () => {
+  const calls: string[] = [];
+  process.env.__ESPERA__ = '0';
+  await drainTick(poolComDebounce(calls, null), knobsDebounce, log);
+  expect(calls.some((s) => s.includes('set run_after'))).toBe(true);
+  expect(calls.some((s) => /insert into\s+job_queue/i.test(s))).toBe(true);
+});
+
+it('teto da rajada é 4 janelas, limitado a 90s', () => {
+  expect(tetoDaRajadaMs(20_000)).toBe(80_000);
+  expect(tetoDaRajadaMs(8_000)).toBe(32_000);
+  expect(tetoDaRajadaMs(60_000)).toBe(90_000);
 });
