@@ -59,7 +59,7 @@ const envSchema = z.object({
   // transação de claim inteira — 5 statements, ~17/s para sempre numa instalação
   // que não atende ninguém (issue #258: 8,09 GB/mês de egress medidos contra uma
   // cota de 5 GB do plano free do Supabase). O 2000 mantém o SIGNIFICADO da chave
-  // para quem já a configurou, cabe 4× dentro do INBOUND_DEBOUNCE_MS (8000) e fica
+  // para quem já a configurou, cabe várias vezes dentro do INBOUND_DEBOUNCE_MS e fica
   // abaixo do idleTimeoutMillis do pool (10s), acima do qual cada rodada reconecta.
   QUEUE_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(2_000),
   // Ritmo do "havia trabalho e eu não peguei" — cap QUEUE_MAX_CONCURRENCY cheio ou
@@ -117,9 +117,10 @@ const envSchema = z.object({
   EVENT_LOG_DRAIN_INTERVAL_MS: z.coerce.number().int().positive().default(2_000),
   EVENT_LOG_DRAIN_IDLE_INTERVAL_MS: z.coerce.number().int().positive().default(10_000),
   EVENT_LOG_DRAIN_BATCH_SIZE: z.coerce.number().int().positive().default(50),
-  // Coalescência de rajada inbound: mensagens do MESMO contato dentro desta
-  // janela viram UM job (responder em rajada é gatilho de ban). 0 = sem debounce.
-  INBOUND_DEBOUNCE_MS: z.coerce.number().int().min(0).default(8_000),
+  // Silêncio inbound por contato antes de o turno rodar. Cada bolha NOVA adia
+  // o job pendente — não é janela fixa desde a primeira. 0 = sem debounce.
+  // 20 s cobre a rajada típica do WhatsApp; 45–60 s pega quem pensa entre frases.
+  INBOUND_DEBOUNCE_MS: z.coerce.number().int().min(0).default(20_000),
   // Circuito de saúde do número — ritmo do ticker (block/response rate por número).
   NUMBER_HEALTH_INTERVAL_MS: z.coerce.number().int().positive().default(300_000),
   // Cron persistente por contato — knobs, nunca constantes.

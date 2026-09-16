@@ -7,8 +7,11 @@
  *   - organization_id vem da LINHA do evento (fonte confiável), nunca do payload;
  *   - at-least-once + dedup: claim CAS (pending→processing) + unique
  *     (organization_id, source_event_id) em job_queue com captura de 23505;
- *   - coalescência de rajada: mensagens do MESMO contato dentro da janela de
- *     debounce viram UM job (o turno lê o histórico completo e responde a todas);
+ *   - coalescência de rajada: cada inbound NOVO adia o job pendente em
+ *     `debounceMs` de silêncio (o turno lê o histórico completo e responde a
+ *     todas). Janela fixa a partir da primeira bolha deixava a segunda — 10 s
+ *     depois — virar outro turno. Teto a partir do `created_at` do job: quem
+ *     fica mandando não adia para sempre;
  *   - grupos @g.us: skip (regra dura nº 12) — evento marcado done sem job;
  *   - eventos 'processing' órfãos (crash do worker) voltam a 'pending' por timeout.
  */
@@ -42,10 +45,23 @@ export interface DrainKnobs {
   batchSize: number;
   intervalMs: number;
   idleIntervalMs: number;
-  /** Janela de coalescência de rajada inbound por contato (0 = sem debounce). */
+  /** Silêncio inbound por contato antes de responder (0 = sem debounce). */
   debounceMs: number;
   /** Evento 'processing' órfão volta a 'pending' após isto. */
   reapTimeoutMs: number;
+}
+
+/**
+ * Quantas janelas de silêncio cabem no teto, contadas desde o `created_at` do
+ * job. Sem teto, um cliente que manda uma bolha a cada 7 s com debounce de 8 s
+ * nunca recebe resposta.
+ */
+export const JANELAS_NO_TETO_DA_RAJADA = 4;
+/** Teto absoluto — mesmo com debounce curto, a rajada não espera mais que isto. */
+export const TETO_ABSOLUTO_DA_RAJADA_MS = 90_000;
+
+export function tetoDaRajadaMs(debounceMs: number): number {
+  return Math.min(Math.max(debounceMs * JANELAS_NO_TETO_DA_RAJADA, debounceMs), TETO_ABSOLUTO_DA_RAJADA_MS);
 }
 
 /** Um tick do drain: claima um lote de eventos e os transforma em jobs. */
@@ -276,20 +292,35 @@ async function processEvent(
     });
   }
 
-  // Coalescência: já existe job PENDING futuro deste contato → esta mensagem
-  // entra de carona (o turno lê o histórico completo). Evento vira done.
+  // Coalescência DESLIZANTE: já existe inbound_turn PENDING deste contato →
+  // esta mensagem entra de carona E o relógio reinicia (silêncio de debounceMs
+  // a partir de AGORA). A versão anterior só pulava o enqueue se `run_after`
+  // ainda era futuro — a janela nascia na primeira bolha e morria 8 s depois,
+  // mesmo com o cliente ainda digitando. Também adia job JÁ VENCIDO e ainda
+  // não claimado: o cliente falou de novo, esperar mais um pouco.
   if (knobs.debounceMs > 0) {
-    const { rows: pendingRows } = await pool.query<{ id: string }>(
-      `select id from job_queue
-       where organization_id = $1 and contact_id = $2
-         and kind = 'inbound_turn' and status = 'pending' and run_after > now()
-       limit 1`,
-      [event.organization_id, p.contact_id],
+    const tetoMs = tetoDaRajadaMs(knobs.debounceMs);
+    const { rows: adiados } = await pool.query<{ id: string }>(
+      `update job_queue
+          set run_after = least(
+                now() + make_interval(secs => $3 / 1000.0),
+                created_at + make_interval(secs => $4 / 1000.0)
+              )
+        where id = (
+          select id from job_queue
+           where organization_id = $1 and contact_id = $2
+             and kind = 'inbound_turn' and status = 'pending'
+           order by run_after
+           limit 1
+           for update skip locked
+        )
+        returning id`,
+      [event.organization_id, p.contact_id, knobs.debounceMs, tetoMs],
     );
-    if (pendingRows[0]) {
+    if (adiados[0]) {
       log.info('drain: rajada coalescida em job pendente', {
         event_id: event.id,
-        job_id: pendingRows[0].id,
+        job_id: adiados[0].id,
       });
       return 'processado';
     }
